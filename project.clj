@@ -8,8 +8,7 @@
   [[lein-cloverage "1.1.0"]]
 
   :dependencies
-  [[org.clojure/clojure "1.10.1"]
-   ,,,]
+  [[org.clojure/clojure "1.10.1"]]
 
   :java-source-paths ["src"]
 
@@ -22,6 +21,7 @@
   {:provided
    {:dependencies
     [[cd.go.plugin/go-plugin-api "19.7.0"]
+     [com.google.code.gson/gson "2.8.5"]
      [com.google.guava/guava "23.0"]]}
 
    :repl
