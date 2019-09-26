@@ -5,32 +5,54 @@
   (:import (com.thoughtworks.go.plugin.api.request DefaultGoPluginApiRequest)
            (com.thoughtworks.go.plugin.api.response DefaultGoPluginApiResponse)))
 
+
 ;; Utils ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; https://github.com/gocd/gocd/blob/master/plugin-infra/go-plugin-api/src/main/java/com/thoughtworks/go/plugin/api/request/DefaultGoPluginApiRequest.java
 (defn default-go-plugin-api-request
   "A .DefaultGoPluginApiRequest with the given name and params"
-  ([request-name request-params] ;; string map -> .DefaultGoPluginApiRequest
+  ([request-name request-params]                            ;; string map -> .DefaultGoPluginApiRequest
    (doto (DefaultGoPluginApiRequest. nil nil request-name)
      (.setRequestParams request-params)))
-  ([request-name] ;; string -> .DefaultGoPluginApiRequest
-   (default-go-plugin-api-request request-name {:set "yes"})))
+  ([request-name]                                           ;; string -> .DefaultGoPluginApiRequest
+   (default-go-plugin-api-request request-name {})))
 
 
-(defn has-response-quality
-  "Asserts that the appropriate response is served by the plugin
+(defn response-equal
+  "Determines if the given responses are equal enough to be treated the same by the GoCD server."
+  [response1 response2]
+  ;; .GoPluginApiResponse .GoPluginApiResponse -> bool
+  (and (= (.responseCode response1) (.responseCode response2))
+       (= (.responseBody response1) (.responseBody response2))
+       (= (.responseHeaders response1) (.responseHeaders response2))))
 
-  - `request`: the request given to the plugin
-  - `response-quality?`: determines if the response has the given quality"
-  [request response-quality? & response-qualities]  ;; .DefaultGoPluginApiRequest (.DefaultGoPluginApiResponse -> bool) -> nil
-  (testing (str "Testing request with name " (.requestName request))
-    (let [response (plugin/handler (atom {}) request)]
-      (is (response-quality? response))
-      (run! #(is (% response)) response-qualities))))
 
-;; Tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Common Logic Tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Handler Tests
+(deftest handler-with-nil-response
+  (testing "Handler when handle-method returns a GoPluginApiResponse response"
+    (with-redefs [plugin/handle-request (fn [_ _ _] true)]
+      (is (response-equal (DefaultGoPluginApiResponse/success "")
+                          (plugin/handler (atom {}) (default-go-plugin-api-request nil)))))))
+
+
+(deftest handler-with-plugin-response
+  (testing "Handler when handle-method returns a GoPluginApiResponse response"
+    (let [response (DefaultGoPluginApiResponse. 200 "response body")]
+      (with-redefs [plugin/handle-request (fn [_ _ _] response)]
+        (is (= response
+               (plugin/handler (atom {}) (default-go-plugin-api-request nil))))))))
+
+
+(deftest handler-with-json-response
+  (testing "Handler when handle-method returns a json response"
+    (let [response {:try "this"}]
+      (with-redefs [plugin/handle-request (fn [_ _ _] response)]
+        (is (response-equal (DefaultGoPluginApiResponse/success "{\"try\":\"this\"}")
+                            (plugin/handler (atom {}) (default-go-plugin-api-request nil))))))))
+
+;; Endpoint Tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (deftest get-icon
-  (has-response-quality
-    (default-go-plugin-api-request "cd.go.secrets.get-icon")
-    #(= (.responseCode %) 200)
-    #(:data (u/json-decode-map (.responseBody %)))  ;; Check data field exists
-    #(= (:content_type (u/json-decode-map (.responseBody %))) "image/svg+xml")))
+  (testing "Get icon endpoint with well formed requests"
+    (let [result-empty-body (plugin/handle-request (atom {}) "cd.go.secrets.get-icon" "")]
+      (is "image/svg+xml"
+          (:content_type result-empty-body))
+      (is (:data result-empty-body)))))                     ;; Check data field exists
