@@ -3,8 +3,10 @@
     [amperity.gocd.secret.vault.plugin :as plugin]
     [clojure.test :refer [testing deftest is]])
   (:import
-    com.thoughtworks.go.plugin.api.request.DefaultGoPluginApiRequest
-    com.thoughtworks.go.plugin.api.response.DefaultGoPluginApiResponse))
+    (com.thoughtworks.go.plugin.api.request
+      DefaultGoPluginApiRequest)
+    (com.thoughtworks.go.plugin.api.response
+      DefaultGoPluginApiResponse)))
 
 
 ;; Utils ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
