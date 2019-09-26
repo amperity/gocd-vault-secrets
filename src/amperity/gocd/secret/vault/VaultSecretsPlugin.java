@@ -10,8 +10,8 @@ import com.thoughtworks.go.plugin.api.annotation.Extension;
 import com.thoughtworks.go.plugin.api.exceptions.UnhandledRequestTypeException;
 import com.thoughtworks.go.plugin.api.logging.Logger;
 import com.thoughtworks.go.plugin.api.request.GoPluginApiRequest;
-import com.thoughtworks.go.plugin.api.response.DefaultGoPluginApiResponse;
 import com.thoughtworks.go.plugin.api.response.GoPluginApiResponse;
+
 import java.util.Arrays;
 
 
@@ -20,9 +20,8 @@ public class VaultSecretsPlugin implements GoPlugin {
 
     public static final Logger LOGGER = Logger.getLoggerFor(VaultSecretsPlugin.class);
 
-    // Fields
-    private GoApplicationAccessor accessor;
-    private IFn handler;
+    private GoApplicationAccessor accessor;  // Set of JSON API's exposing GoCD info specifically curated for plugins.
+    private IFn handler;  // Exposes plugin API
     private Atom state;
 
 
@@ -57,7 +56,7 @@ public class VaultSecretsPlugin implements GoPlugin {
         try {
             IFn init = Clojure.var("amperity.gocd.secret.vault.plugin", "initialize!");
             IFn logger = getLoggerFn();
-            this.state = (Atom)init.invoke(logger, accessor);
+            this.state = (Atom) init.invoke(logger, this.accessor);
         } catch (Exception ex) {
             LOGGER.error("Failed to initialize plugin state", ex);
             throw ex;
@@ -73,7 +72,7 @@ public class VaultSecretsPlugin implements GoPlugin {
      */
     @Override
     public GoPluginApiResponse handle(GoPluginApiRequest request) throws UnhandledRequestTypeException {
-        return (GoPluginApiResponse)handler.invoke(state, request);
+        return (GoPluginApiResponse) this.handler.invoke(this.state, request);
     }
 
 
@@ -87,7 +86,7 @@ public class VaultSecretsPlugin implements GoPlugin {
      * `ClassNotFoundException` pointing at the interface. ಠ_ಠ
      */
     private static void logPluginMessage(String level, String message, Throwable throwable) {
-        switch(level) {
+        switch (level) {
             case "debug":
                 if (throwable != null) {
                     LOGGER.debug(message, throwable);
@@ -128,10 +127,9 @@ public class VaultSecretsPlugin implements GoPlugin {
     private IFn getLoggerFn() {
         return new clojure.lang.AFn() {
             public Object invoke(Object level, Object message, Object throwable) {
-                logPluginMessage((String)level, (String)message, (Throwable)throwable);
+                logPluginMessage((String) level, (String) message, (Throwable) throwable);
                 return null;
             }
         };
     }
-
 }
