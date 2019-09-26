@@ -1,5 +1,5 @@
 (ns amperity.gocd.secret.vault.plugin-api
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [testing deftest is]]
             [amperity.gocd.secret.vault.plugin :as plugin]
             [amperity.gocd.secret.vault.util :as u])
   (:import (com.thoughtworks.go.plugin.api.request DefaultGoPluginApiRequest)
@@ -8,18 +8,23 @@
 
 ;; Utils ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn default-go-plugin-api-request
-  "A .DefaultGoPluginApiRequest with the given name and params"
-  ([request-name request-params]                            ;; string map -> .DefaultGoPluginApiRequest
+  "A .DefaultGoPluginApiRequest with the given name and params.
+  Parameters:
+  - `request-name` string of the name (essentially the route) of the request
+  - `request-params` map of request parameters"
+  ([request-name request-params]
    (doto (DefaultGoPluginApiRequest. nil nil request-name)
      (.setRequestParams request-params)))
-  ([request-name]                                           ;; string -> .DefaultGoPluginApiRequest
+  ([request-name]
    (default-go-plugin-api-request request-name {})))
 
 
 (defn response-equal
-  "Determines if the given responses are equal enough to be treated the same by the GoCD server."
+  "Determines if the given responses are equal enough to be treated the same by the GoCD server.
+  Parameters:
+  - `response1`: .GoPluginApiResponse to compare to response2
+  - `response2`: .GoPluginApiResponse to compare to response1"
   [response1 response2]
-  ;; .GoPluginApiResponse .GoPluginApiResponse -> bool
   (and (= (.responseCode response1) (.responseCode response2))
        (= (.responseBody response1) (.responseBody response2))
        (= (.responseHeaders response1) (.responseHeaders response2))))
@@ -55,4 +60,4 @@
     (let [result-empty-body (plugin/handle-request (atom {}) "cd.go.secrets.get-icon" "")]
       (is "image/svg+xml"
           (:content_type result-empty-body))
-      (is (:data result-empty-body)))))                     ;; Check data field exists
+      (is (:data result-empty-body)))))
