@@ -3,11 +3,11 @@
   (:require
     [amperity.gocd.secret.vault.logging :as log]
     [amperity.gocd.secret.vault.util :as u]
-    [vault.core :as vault]
-    [vault.client.mock]
-    [vault.client.http]
     [clojure.java.io :as io]
-    [clojure.string :as str])
+    [clojure.string :as str]
+    [vault.client.http]
+    [vault.client.mock]
+    [vault.core :as vault])
   (:import
     (com.thoughtworks.go.plugin.api
       GoApplicationAccessor
@@ -38,11 +38,10 @@
   (atom {}))
 
 
-
 ;; ## Request Handling
 
 (defmulti handle-request
-          "Handle a plugin API request and respond. Methods should return a map containing the following 3 keys:
+  "Handle a plugin API request and respond. Methods should return a map containing the following 3 keys:
           ```{
             :response-code     <int: the returned status, follows HTTP status conventions>
             :response-body     <json-coercible: the response body, will be coerced into JSON>
@@ -53,9 +52,9 @@
           - `vault-client`: vault.client, used for auth and retrieval of all the secret values
           - `req-name`: string, determines how to dispatch among implementing methods, essentially the route
           - `data`: map, the body of the message passed from the GoCD server"
-          (fn dispatch
-            [client req-name data]
-            req-name))
+  (fn dispatch
+    [client req-name data]
+    req-name))
 
 
 (defmethod handle-request :default
@@ -82,7 +81,6 @@
       (DefaultGoPluginApiResponse/error (.getMessage ex)))))
 
 
-
 ;; ## Plugin Metadata
 
 ;; This call is expected to return the icon for the plugin, so as to make
@@ -94,7 +92,6 @@
      :response-headers {}
      :response-body    {:content_type "image/svg+xml"
                         :data         (u/b64-encode-str icon-svg)}}))
-
 
 
 ;; ## Secrets Configuration
@@ -132,7 +129,6 @@
     {:response-code    200
      :response-headers {}
      :response-body    (into [] (remove nil?) [(validate-string :vault_addr "Vault URL")])}))
-
 
 
 ;; ## Secret Usage
