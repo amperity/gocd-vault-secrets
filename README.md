@@ -3,7 +3,7 @@ gocd-vault-secrets
 
 <img height="80" width="80" align="right" src="resources/amperity/gocd/secret/vault/logo.svg"/>
 
-[![CircleCI](https://circleci.com/gh/amperity/gocd-vault-secrets.svg?style=shield&circle-token=69e958626f163693a8b24fe5a76d5a3795157257)](https://circleci.com/gh/amperity/gocd-vault-secrets)
+[![CircleCI](https://circleci.com/gh/amperity/gocd-vault-secrets.svg?style=shield&circle-token=b9256c6d46160ab045b44cdfe5add3954dd0cbf2)](https://circleci.com/gh/amperity/gocd-vault-secrets)
 [![codecov](https://codecov.io/gh/amperity/gocd-vault-secrets/branch/master/graph/badge.svg)](https://codecov.io/gh/amperity/gocd-vault-secrets)
 
 A plugin for [GoCD](https://www.gocd.org/) providing secret material support via
