@@ -34,7 +34,7 @@
   "Set up the vault client."
   [logger app-accessor]
   (alter-var-root #'log/logger (constantly logger))
-  ;; TODO: determine what goes in the state
+  ;; TODO: actually initialize a Vault client
   (atom {}))
 
 
@@ -54,7 +54,7 @@
           - `req-name`: string, determines how to dispatch among implementing methods, essentially the route
           - `data`: map, the body of the message passed from the GoCD server"
           (fn dispatch
-            [state req-name data]
+            [client req-name data]
             req-name))
 
 
@@ -65,12 +65,12 @@
 
 (defn handler
   "Request handling entry-point."
-  [state ^GoPluginApiRequest request]
+  [client ^GoPluginApiRequest request]
   (try
     (let [req-name (.requestName request)
           req-data (when-not (str/blank? (.requestBody request))
                      (u/json-decode-map (.requestBody request)))
-          {status :response-code body :response-body headers :response-headers} (handle-request state req-name req-data)]
+          {status :response-code body :response-body headers :response-headers} (handle-request client req-name req-data)]
       (DefaultGoPluginApiResponse. status (u/json-encode body) headers))
     (catch UnhandledRequestTypeException ex
       (throw ex))
