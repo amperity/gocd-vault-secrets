@@ -1,10 +1,10 @@
 (ns amperity.gocd.secret.vault.plugin-api
   (:require
     [amperity.gocd.secret.vault.plugin :as plugin]
+    [amperity.gocd.secret.vault.util :as u]
     [clojure.test :refer [testing deftest is]]
     [vault.client.mock]
-    [vault.core :as vault]
-    [amperity.gocd.secret.vault.util :as u])
+    [vault.core :as vault])
   (:import
     (com.thoughtworks.go.plugin.api.request
       DefaultGoPluginApiRequest)
