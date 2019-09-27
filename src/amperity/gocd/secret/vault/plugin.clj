@@ -3,6 +3,9 @@
   (:require
     [amperity.gocd.secret.vault.logging :as log]
     [amperity.gocd.secret.vault.util :as u]
+    [vault.core :as vault]
+    [vault.client.mock]
+    [vault.client.http]
     [clojure.java.io :as io]
     [clojure.string :as str])
   (:import
@@ -23,7 +26,12 @@
 ;; ## Plugin Initialization
 
 (defn initialize!
-  "Initialize the plugin state."
+  ;; should really just be named initialize, not initialize!, all mutation is self contained
+  ; 1. Access app info using app accessor to determine url, app-id, etc.
+  ; 2. Create a vault client
+  ; 3. Authenticate the vault client
+  ; 4. Return the vault client
+  "Set up the vault client."
   [logger app-accessor]
   (alter-var-root #'log/logger (constantly logger))
   ;; TODO: determine what goes in the state
@@ -34,12 +42,20 @@
 ;; ## Request Handling
 
 (defmulti handle-request
-  "Handle a plugin API request and respond. Methods should return `true` for an
-  empty success response, a data structure to coerce into a successful JSON
-  response, or a custom `GoPluginApiResponse`."
-  (fn dispatch
-    [state req-name data]
-    req-name))
+          "Handle a plugin API request and respond. Methods should return a map containing the following 3 keys:
+          ```{
+            :response-code     <int: the returned status, follows HTTP status conventions>
+            :response-body     <json-coercible: the response body, will be coerced into JSON>
+            :response-headers  <map: the response headers, follows HTTP header conventions>
+          }```
+
+          Params:
+          - `vault-client`: vault.client, used for auth and retrieval of all the secret values
+          - `req-name`: string, determines how to dispatch among implementing methods, essentially the route
+          - `data`: map, the body of the message passed from the GoCD server"
+          (fn dispatch
+            [state req-name data]
+            req-name))
 
 
 (defmethod handle-request :default
@@ -54,16 +70,8 @@
     (let [req-name (.requestName request)
           req-data (when-not (str/blank? (.requestBody request))
                      (u/json-decode-map (.requestBody request)))
-          result (handle-request state req-name req-data)]
-      (cond
-        (true? result)
-        (DefaultGoPluginApiResponse/success "")
-
-        (instance? GoPluginApiResponse result)
-        result
-
-        :else
-        (DefaultGoPluginApiResponse/success (u/json-encode result))))
+          {status :response-code body :response-body headers :response-headers} (handle-request state req-name req-data)]
+      (DefaultGoPluginApiResponse. status (u/json-encode body) headers))
     (catch UnhandledRequestTypeException ex
       (throw ex))
     (catch Exception ex
@@ -82,8 +90,10 @@
 (defmethod handle-request "cd.go.secrets.get-icon"
   [_ _ _]
   (let [icon-svg (slurp (io/resource "amperity/gocd/secret/vault/logo.svg"))]
-    {:content_type "image/svg+xml"
-     :data (u/b64-encode-str icon-svg)}))
+    {:response-code    200
+     :response-headers {}
+     :response-body    {:content_type "image/svg+xml"
+                        :data         (u/b64-encode-str icon-svg)}}))
 
 
 
@@ -94,7 +104,9 @@
 (defmethod handle-request "go.cd.secrets.get-view"
   [_ _ _]
   (let [view-html (slurp (io/resource "amperity/gocd/secret/vault/secrets-view.html"))]
-    {:template view-html}))
+    {:response-code    200
+     :response-headers {}
+     :response-body    {:template view-html}}))
 
 
 ;; This message should return metadata about the available settings for
@@ -102,8 +114,10 @@
 (defmethod handle-request "go.cd.secrets.get-metadata"
   [_ _ _]
   ;; TODO: how does the plugin authenticate?
-  [{:key :vault_addr
-    :metadata {:required true, :secure false}}])
+  {:response-code    200
+   :response-headers {}
+   :response-body    [{:key      :vault_addr
+                       :metadata {:required true :secure false}}]})
 
 
 ;; This call is expected to validate the user inputs that form a part of
@@ -113,12 +127,11 @@
   (letfn [(validate-string
             [field-key label]
             (when (str/blank? (get data field-key))
-              {:key field-key
+              {:key     field-key
                :message (str label " is required")}))]
-    (into
-      []
-      (remove nil?)
-      [(validate-string :vault_addr "Vault URL")])))
+    {:response-code    200
+     :response-headers {}
+     :response-body    (into [] (remove nil?) [(validate-string :vault_addr "Vault URL")])}))
 
 
 
@@ -130,7 +143,9 @@
 ;; for secrets from the external Secret Manager.
 (defmethod handle-request "go.cd.secrets.secrets-lookup"
   [_ _ data]
+  ;; TODO: See https://plugin-api.gocd.org/19.7.0/secrets/#lookup-secrets for desired response
   (let [configuration (:configuration data)
         secret-keys (:keys data)]
-    ;; TODO: See https://plugin-api.gocd.org/19.7.0/secrets/#lookup-secrets for desired response
-    (DefaultGoPluginApiResponse/error "NYI")))
+    {:response-code    500
+     :response-headers {}
+     :response-body    "NYI"}))

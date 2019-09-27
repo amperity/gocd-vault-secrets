@@ -20,7 +20,8 @@
   :profiles
   {:provided
    {:dependencies
-    [[cd.go.plugin/go-plugin-api "19.7.0"]
+    [[amperity/vault-clj "0.7.0"]
+     [cd.go.plugin/go-plugin-api "19.7.0"]
      [com.google.code.gson/gson "2.8.5"]
      [com.google.guava/guava "23.0"]]}
 
