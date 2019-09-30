@@ -42,16 +42,16 @@
 
 (defmulti handle-request
   "Handle a plugin API request and respond. Methods should return a map containing the following 3 keys:
-          ```{
-            :response-code     <int: the returned status, follows HTTP status conventions>
-            :response-body     <json-coercible: the response body, will be coerced into JSON>
-            :response-headers  <map: the response headers, follows HTTP header conventions>
-          }```
+  ```{
+    :response-code     <int: the returned status, follows HTTP status conventions>
+    :response-body     <json-coercible: the response body, will be coerced into JSON>
+    :response-headers  <map: the response headers, follows HTTP header conventions>
+  }```
 
-          Params:
-          - `vault-client`: vault.client, used for auth and retrieval of all the secret values
-          - `req-name`: string, determines how to dispatch among implementing methods, essentially the route
-          - `data`: map, the body of the message passed from the GoCD server"
+  Params:
+  - `client`: vault.client, used for auth and retrieval of all the secret values
+  - `req-name`: string, determines how to dispatch among implementing methods, essentially the route
+  - `data`: map, the body of the message passed from the GoCD server"
   (fn dispatch
     [client req-name data]
     req-name))
