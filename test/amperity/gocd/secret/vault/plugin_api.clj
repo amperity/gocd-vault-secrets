@@ -82,7 +82,6 @@
       (is (= status 200)))))
 
 
-
 (deftest secrets-lookup
   (testing "Can look up secrets stored in vault given a well formed request"
     (let [result (plugin/handle-request (mock-client) "go.cd.secrets.secrets-lookup"
