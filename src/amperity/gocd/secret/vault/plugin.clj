@@ -25,6 +25,8 @@
 
 ;; ## Plugin Initialization
 
+;; (vault/renew-token client)
+
 (defn initialize!
   ;; should really just be named initialize, not initialize!, all mutation is self contained
   ; 1. Access app info using app accessor to determine url, app-id, etc.
@@ -136,10 +138,19 @@
 ;; request body will also have the configuration required to connect and lookup
 ;; for secrets from the external Secret Manager.
 (defmethod handle-request "go.cd.secrets.secrets-lookup"
-  [_ _ data]
+  [client _ data]
   ;; TODO: See https://plugin-api.gocd.org/19.7.0/secrets/#lookup-secrets for desired response
   (let [configuration (:configuration data)
         secret-keys (:keys data)]
-    {:response-code    500
-     :response-headers {}
-     :response-body    "NYI"}))
+    (try
+      {:response-code 200
+       :response-headers {}
+       :response-body (into [] (map (fn [key] {:key key :value (vault/read-secret client key)}) secret-keys))}
+      (catch clojure.lang.ExceptionInfo ex
+        (if (= 404 (:status (ex-data ex)))
+          {:response-code    404
+           :response-headers {}
+           :response-body    (str "Unable to resolve key(s) " secret-keys)}
+          {:response-code    500
+           :response-headers {}
+           :response-body    (str "Error occured during lookup " ex)})))))
