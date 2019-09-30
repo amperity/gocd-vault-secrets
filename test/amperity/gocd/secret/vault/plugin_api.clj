@@ -55,11 +55,10 @@
 
 (deftest handler-with-plugin-response
   (testing "Handler when handle-method returns a GoPluginApiResponse response"
-    (let [response (DefaultGoPluginApiResponse/success "response body")]
-      (with-redefs [plugin/handle-request
-                    (fn [_ _ _] {:response-code 200 :response-body {:message "hello"} :response-headers {}})]
-        (is (response-equal (DefaultGoPluginApiResponse/success "{\"message\":\"hello\"}")
-                            (plugin/handler (mock-client) (default-go-plugin-api-request nil))))))))
+    (with-redefs [plugin/handle-request
+                  (fn [_ _ _] {:response-code 200 :response-body {:message "hello"} :response-headers {}})]
+      (is (response-equal (DefaultGoPluginApiResponse/success "{\"message\":\"hello\"}")
+                          (plugin/handler (mock-client) (default-go-plugin-api-request nil)))))))
 
 
 (deftest handler-with-json-response

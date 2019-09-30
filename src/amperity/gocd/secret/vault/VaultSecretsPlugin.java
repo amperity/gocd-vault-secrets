@@ -21,7 +21,7 @@ public class VaultSecretsPlugin implements GoPlugin {
 
     private GoApplicationAccessor accessor;  // Set of JSON API's exposing GoCD info specifically curated for plugins.
     private IFn handler;  // Exposes plugin API
-    private IFn client;  // The Vault Client, TODO: IMPLEMENT, currently in inconsistent state as an atom
+    private Object client;  // The Vault Client
 
 
     /**
@@ -55,7 +55,7 @@ public class VaultSecretsPlugin implements GoPlugin {
         try {
             IFn init = Clojure.var("amperity.gocd.secret.vault.plugin", "initialize!");
             IFn logger = getLoggerFn();
-            this.client = (IFn) init.invoke(logger, this.accessor);
+            this.client = init.invoke(logger, this.accessor);
         } catch (Exception ex) {
             LOGGER.error("Failed to initialize plugin state", ex);
             throw ex;
