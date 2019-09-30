@@ -147,10 +147,10 @@
        :response-headers {}
        :response-body (into [] (map (fn [key] {:key key :value (vault/read-secret client key)}) secret-keys))}
       (catch clojure.lang.ExceptionInfo ex
-        (if (= 404 (:status (ex-data ex)))
+        (if (= "No such secret" (first (str/split (ex-message ex) #":")))
           {:response-code    404
            :response-headers {}
-           :response-body    (str "Unable to resolve key(s) " secret-keys)}
+           :response-body    {:message (str "Unable to resolve key(s) " secret-keys)}}
           {:response-code    500
            :response-headers {}
-           :response-body    (str "Error occured during lookup " ex)})))))
+           :response-body    {:message (str "Error occured during lookup:\n " ex)}})))))
