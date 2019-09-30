@@ -1,7 +1,6 @@
 package amperity.gocd.secret.vault;
 
 import clojure.java.api.Clojure;
-import clojure.lang.Atom;
 import clojure.lang.IFn;
 import com.thoughtworks.go.plugin.api.GoApplicationAccessor;
 import com.thoughtworks.go.plugin.api.GoPluginIdentifier;
@@ -22,7 +21,7 @@ public class VaultSecretsPlugin implements GoPlugin {
 
     private GoApplicationAccessor accessor;  // Set of JSON API's exposing GoCD info specifically curated for plugins.
     private IFn handler;  // Exposes plugin API
-    private Atom state;
+    private Object client;  // The Vault Client
 
 
     /**
@@ -56,7 +55,7 @@ public class VaultSecretsPlugin implements GoPlugin {
         try {
             IFn init = Clojure.var("amperity.gocd.secret.vault.plugin", "initialize!");
             IFn logger = getLoggerFn();
-            this.state = (Atom) init.invoke(logger, this.accessor);
+            this.client = init.invoke(logger, this.accessor);
         } catch (Exception ex) {
             LOGGER.error("Failed to initialize plugin state", ex);
             throw ex;
@@ -72,7 +71,7 @@ public class VaultSecretsPlugin implements GoPlugin {
      */
     @Override
     public GoPluginApiResponse handle(GoPluginApiRequest request) throws UnhandledRequestTypeException {
-        return (GoPluginApiResponse) this.handler.invoke(this.state, request);
+        return (GoPluginApiResponse) this.handler.invoke(this.client, request);
     }
 
 

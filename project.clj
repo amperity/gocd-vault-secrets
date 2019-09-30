@@ -8,7 +8,8 @@
   [[lein-cloverage "1.1.0"]]
 
   :dependencies
-  [[org.clojure/clojure "1.10.1"]]
+  [[amperity/vault-clj "0.7.0"]
+   [org.clojure/clojure "1.10.1"]]
 
   :java-source-paths ["src"]
 
