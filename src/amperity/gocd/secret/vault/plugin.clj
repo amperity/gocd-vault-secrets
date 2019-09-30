@@ -141,9 +141,10 @@
   [client _ data]
   (let [configuration (:configuration data)
         secret-keys (:keys data)
-        error-during-lookup (fn [e] {:response-code    500
-                                     :response-headers {}
-                                     :response-body    {:message (str "Error occured during lookup:\n " e)}})]
+        error-during-lookup (fn [e]
+                              {:response-code    500
+                               :response-headers {}
+                               :response-body    {:message (str "Error occurred during lookup:\n " e)}})]
     (try
       {:response-code    200
        :response-headers {}
