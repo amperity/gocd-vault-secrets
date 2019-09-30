@@ -28,7 +28,6 @@
 ;; (vault/renew-token client)
 
 (defn initialize!
-  ;; should really just be named initialize, not initialize!, all mutation is self contained
   ; 1. Access app info using app accessor to determine url, app-id, etc.
   ; 2. Create a vault client
   ; 3. Authenticate the vault client
@@ -37,16 +36,18 @@
   [logger app-accessor]
   (alter-var-root #'log/logger (constantly logger))
   ;; TODO: actually initialize a Vault client
-  (atom {}))
+  nil)
 
 
 ;; ## Request Handling
 
 (defmulti handle-request
   "Handle a plugin API request and respond. Methods should return a map containing the following 3 keys:
-  ```{:response-code     <int: the returned status, follows HTTP status conventions>
-      :response-body     <json-coercible: the response body, will be coerced into JSON>
-      :response-headers  <map: the response headers, follows HTTP header conventions>}```
+  ```
+  {:response-code     <int: the returned status, follows HTTP status conventions>
+   :response-body     <json-coercible: the response body, will be coerced into JSON>
+   :response-headers  <map: the response headers, follows HTTP header conventions>}
+  ```
 
   Params:
   - `client`: vault.client, used for auth and retrieval of all the secret values
