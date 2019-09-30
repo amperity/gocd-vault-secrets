@@ -42,11 +42,9 @@
 
 (defmulti handle-request
   "Handle a plugin API request and respond. Methods should return a map containing the following 3 keys:
-  ```{
-    :response-code     <int: the returned status, follows HTTP status conventions>
-    :response-body     <json-coercible: the response body, will be coerced into JSON>
-    :response-headers  <map: the response headers, follows HTTP header conventions>
-  }```
+  ```{:response-code     <int: the returned status, follows HTTP status conventions>
+      :response-body     <json-coercible: the response body, will be coerced into JSON>
+      :response-headers  <map: the response headers, follows HTTP header conventions>}```
 
   Params:
   - `client`: vault.client, used for auth and retrieval of all the secret values
