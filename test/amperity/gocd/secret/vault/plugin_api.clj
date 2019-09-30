@@ -113,10 +113,10 @@
              body))
       (is (= status 404))))
   (testing "Fails cleanly when other lookup error occurs"
-    (let [result (with-redefs [vault/read-secret #(println (Exception. "Mock Exception"))]
+    (let [result (with-redefs [map (fn [_ _] (throw (Exception. "Mock Exception")))]
                    (plugin/handle-request (mock-client) "go.cd.secrets.secrets-lookup"
-                                          {;; Eventual plan for configuration is to allow overrides to the user group and
-                                           ;;     re-authenticate the vault client with a new user group
+                                          {;; Eventual plan for configuration is to allow overrides to the user group
+                                           ;;    and re-authenticate the vault client with a new user group
                                            :configuration {}
                                            :keys          [:batman]}))
           _ (:response-body result)
