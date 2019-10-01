@@ -20,12 +20,12 @@
     (com.thoughtworks.go.plugin.api.response
       DefaultGoPluginApiResponse
       GoPluginApiResponse)
-    java.time.Instant))
+    java.time.Instant
+    (clojure.lang ExceptionInfo)))
 
 
 ;; ## Plugin Initialization
 
-;; (vault/renew-token client)
 
 (defn initialize!
   ; 1. Access app info using app accessor to determine url, app-id, etc.
