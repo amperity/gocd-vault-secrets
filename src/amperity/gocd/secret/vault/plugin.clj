@@ -9,6 +9,7 @@
     [vault.client.mock]
     [vault.core :as vault])
   (:import
+    clojure.lang.ExceptionInfo
     (com.thoughtworks.go.plugin.api
       GoApplicationAccessor
       GoPluginIdentifier)
@@ -20,8 +21,7 @@
     (com.thoughtworks.go.plugin.api.response
       DefaultGoPluginApiResponse
       GoPluginApiResponse)
-    java.time.Instant
-    (clojure.lang ExceptionInfo)))
+    java.time.Instant))
 
 
 ;; ## Plugin Initialization
