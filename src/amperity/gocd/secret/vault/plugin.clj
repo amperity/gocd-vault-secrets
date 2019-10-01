@@ -149,8 +149,11 @@
     (try
       {:response-code    200
        :response-headers {}
-       :response-body    (into [] (map (fn [key] {:key key :value (vault/read-secret client key)}) secret-keys))}
-      (catch clojure.lang.ExceptionInfo ex
+       :response-body    (into []
+                               (map (fn [key]
+                                      {:key key :value (vault/read-secret client key)})
+                                    secret-keys))}
+      (catch ExceptionInfo ex
         (if (= "No such secret" (first (str/split (ex-message ex) #":")))
           {:response-code    404
            :response-headers {}

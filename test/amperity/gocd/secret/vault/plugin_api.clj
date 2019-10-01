@@ -83,13 +83,13 @@
 
 (deftest secrets-lookup
   (testing "Can look up secrets stored in vault given a well formed request"
-    (let [result (plugin/handle-request (mock-client) "go.cd.secrets.secrets-lookup"
-                                        {;; Eventual plan for configuration is to allow overrides to the user group and
-                                         ;;     re-authenticate the vault client with a new user group
-                                         :configuration {}
-                                         ;; The keys will likely be string in the http vault client instance, but this
-                                         ;;     is easier for testing.
-                                         :keys          [:batman :hulk :wonder-woman]})
+    (let [result (plugin/handle-request
+                   (mock-client)
+                   "go.cd.secrets.secrets-lookup"
+                   {:configuration {}
+                    ;; The keys will likely be string in the http vault client instance,
+                    ;; but this is easier for testing.
+                    :keys          [:batman :hulk :wonder-woman]})
           body (:response-body result)
           status (:response-code result)
           _ (:response-headers result)]
@@ -100,9 +100,7 @@
       (is (= status 200))))
   (testing "Fails cleanly when looking up secrets that don't exist"
     (let [result (plugin/handle-request (mock-client) "go.cd.secrets.secrets-lookup"
-                                        {;; Eventual plan for configuration is to allow overrides to the user group and
-                                         ;;     re-authenticate the vault client with a new user group
-                                         :configuration {}
+                                        {:configuration {}
                                          :keys          [:dr-who :jack-the-ripper]})
           body (:response-body result)
           status (:response-code result)
@@ -113,9 +111,7 @@
   (testing "Fails cleanly when other lookup error occurs"
     (let [result (with-redefs [map (fn [_ _] (throw (Exception. "Mock Exception")))]
                    (plugin/handle-request (mock-client) "go.cd.secrets.secrets-lookup"
-                                          {;; Eventual plan for configuration is to allow overrides to the user group
-                                           ;;    and re-authenticate the vault client with a new user group
-                                           :configuration {}
+                                          {:configuration {}
                                            :keys          [:batman]}))
           _ (:response-body result)
           status (:response-code result)
