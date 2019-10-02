@@ -105,15 +105,16 @@
           body (:response-body result)
           status (:response-code result)
           _ (:response-headers result)]
-      (is (= {:message "Unable to resolve key(s) [:dr-who :jack-the-ripper]"}
+      (is (= {:message "Unable to resolve key :dr-who"}
              body))
       (is (= status 404))))
   (testing "Fails cleanly when other lookup error occurs"
-    (let [result (with-redefs [map (fn [_ _] (throw (Exception. "Mock Exception")))]
-                   (plugin/handle-request (mock-client) "go.cd.secrets.secrets-lookup"
+    (let [result (with-redefs [vault.core/read-secret (fn [& _] (throw (ex-info "Mock Exception" {})))]
+                   (plugin/handle-request nil "go.cd.secrets.secrets-lookup"
                                           {:configuration {}
                                            :keys          [:batman]}))
-          _ (:response-body result)
+          body (:response-body result)
           status (:response-code result)
           _ (:response-headers result)]
+      (is (= body {:message "Error occurred during lookup:\n clojure.lang.ExceptionInfo: Mock Exception {}"}))
       (is (= status 500)))))

@@ -140,24 +140,19 @@
 ;; for secrets from the external Secret Manager.
 (defmethod handle-request "go.cd.secrets.secrets-lookup"
   [client _ data]
-  (let [configuration (:configuration data)
-        secret-keys (:keys data)
-        error-during-lookup (fn [e]
-                              {:response-code    500
-                               :response-headers {}
-                               :response-body    {:message (str "Error occurred during lookup:\n " e)}})]
+  (let [secret-keys (:keys data)]
     (try
       {:response-code    200
        :response-headers {}
-       :response-body    (into []
-                               (map (fn [key]
-                                      {:key key :value (vault/read-secret client key)})
-                                    secret-keys))}
+       :response-body    (mapv (fn [key]
+                                 {:key   key
+                                  :value (vault/read-secret client key)})
+                               secret-keys)}
       (catch ExceptionInfo ex
         (if (= "No such secret" (first (str/split (ex-message ex) #":")))
           {:response-code    404
            :response-headers {}
-           :response-body    {:message (str "Unable to resolve key(s) " secret-keys)}}
-          (error-during-lookup ex)))
-      (catch Exception e
-        (error-during-lookup e)))))
+           :response-body    {:message (str "Unable to resolve key " (:secret (ex-data ex)))}}
+          {:response-code    500
+           :response-headers {}
+           :response-body    {:message (str "Error occurred during lookup:\n " ex)}})))))
