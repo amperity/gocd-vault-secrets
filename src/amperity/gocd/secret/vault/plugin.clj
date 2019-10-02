@@ -26,7 +26,6 @@
 
 ;; ## Plugin Initialization
 
-
 (defn initialize!
   ; 1. Access app info using app accessor to determine url, app-id, etc.
   ; 2. Create a vault client
@@ -140,19 +139,20 @@
 ;; for secrets from the external Secret Manager.
 (defmethod handle-request "go.cd.secrets.secrets-lookup"
   [client _ data]
-  (let [secret-keys (:keys data)]
-    (try
+  (try
+    (let [secret-keys (:keys data)
+          secrets (mapv (fn [key]
+                          {:key   key
+                           :value (vault/read-secret client key)})
+                        secret-keys)]
       {:response-code    200
        :response-headers {}
-       :response-body    (mapv (fn [key]
-                                 {:key   key
-                                  :value (vault/read-secret client key)})
-                               secret-keys)}
-      (catch ExceptionInfo ex
-        (if (= "No such secret" (first (str/split (ex-message ex) #":")))
-          {:response-code    404
-           :response-headers {}
-           :response-body    {:message (str "Unable to resolve key " (:secret (ex-data ex)))}}
-          {:response-code    500
-           :response-headers {}
-           :response-body    {:message (str "Error occurred during lookup:\n " ex)}})))))
+       :response-body    secrets})
+    (catch ExceptionInfo ex
+      (if (= "No such secret" (first (str/split (ex-message ex) #":")))
+        {:response-code    404
+         :response-headers {}
+         :response-body    {:message (str "Unable to resolve key " (:secret (ex-data ex)))}}
+        {:response-code    500
+         :response-headers {}
+         :response-body    {:message (str "Error occurred during lookup:\n " ex)}}))))

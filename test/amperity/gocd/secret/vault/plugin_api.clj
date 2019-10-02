@@ -73,12 +73,11 @@
   (testing "Get icon endpoint with well formed requests"
     (let [result (plugin/handle-request (mock-client) "cd.go.secrets.get-icon" "")
           body (:response-body result)
-          status (:response-code result)
-          _ (:response-headers result)]
+          status (:response-code result)]
       (is "image/svg+xml"
           (:content_type body))
       (is (:data body))
-      (is (= status 200)))))
+      (is (= 200 status)))))
 
 
 (deftest secrets-lookup
@@ -91,30 +90,29 @@
                     ;; but this is easier for testing.
                     :keys          [:batman :hulk :wonder-woman]})
           body (:response-body result)
-          status (:response-code result)
-          _ (:response-headers result)]
+          status (:response-code result)]
       (is (= [{:key :batman :value "Bruce Wayne"}
               {:key :hulk :value "Bruce Banner"}
               {:key :wonder-woman :value "Diana Prince"}]
              body))
-      (is (= status 200))))
+      (is (= 200 status))))
   (testing "Fails cleanly when looking up secrets that don't exist"
     (let [result (plugin/handle-request (mock-client) "go.cd.secrets.secrets-lookup"
                                         {:configuration {}
                                          :keys          [:dr-who :jack-the-ripper]})
           body (:response-body result)
-          status (:response-code result)
-          _ (:response-headers result)]
+          status (:response-code result)]
       (is (= {:message "Unable to resolve key :dr-who"}
              body))
-      (is (= status 404))))
+      (is (= 404 status))))
   (testing "Fails cleanly when other lookup error occurs"
-    (let [result (with-redefs [vault.core/read-secret (fn [& _] (throw (ex-info "Mock Exception" {})))]
-                   (plugin/handle-request nil "go.cd.secrets.secrets-lookup"
-                                          {:configuration {}
-                                           :keys          [:batman]}))
+    (let [mock-client-that-errors (reify vault/SecretClient (read-secret [& _] (throw (ex-info "Mock Exception" {}))))
+          result (plugin/handle-request
+                   mock-client-that-errors
+                   "go.cd.secrets.secrets-lookup"
+                   {:configuration {}
+                    :keys          [:batman]})
           body (:response-body result)
-          status (:response-code result)
-          _ (:response-headers result)]
-      (is (= body {:message "Error occurred during lookup:\n clojure.lang.ExceptionInfo: Mock Exception {}"}))
-      (is (= status 500)))))
+          status (:response-code result)]
+      (is (= {:message "Error occurred during lookup:\n clojure.lang.ExceptionInfo: Mock Exception {}"} body))
+      (is (= 500 status)))))
