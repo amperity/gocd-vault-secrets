@@ -42,7 +42,7 @@
 (defn mock-client
   "A mock vault client using the secrets found in `resources/secret-fixture.edn`"
   []
-  (vault/new-client "mock:resources/secret-fixture.edn"))
+  (vault/new-client "mock:amperity/gocd/secret/vault/secret-fixture.edn"))
 
 ;; Common Logic Tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Handler Tests
