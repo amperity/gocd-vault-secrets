@@ -115,5 +115,5 @@
                     :keys          [:batman]})
           body (:response-body result)
           status (:response-code result)]
-      (is (= {:message "Error occurred during lookup:\n clojure.lang.ExceptionInfo: Mock Exception {}"} body))
+      (is (= {:message "Error occurred during lookup:\nclojure.lang.ExceptionInfo: Mock Exception {}"} body))
       (is (= 500 status)))))
