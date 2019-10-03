@@ -39,10 +39,10 @@
        (= (.responseHeaders response1) (.responseHeaders response2))))
 
 
-(defn mock-client
+(defn mock-client-atom
   "A mock vault client using the secrets found in `resources/secret-fixture.edn`"
   []
-  (vault/new-client "mock:amperity/gocd/secret/vault/secret-fixture.edn"))
+  (atom (vault/new-client "mock:amperity/gocd/secret/vault/secret-fixture.edn")))
 
 ;; Common Logic Tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Handler Tests
@@ -50,7 +50,7 @@
   (testing "Handler when handle-method returns a GoPluginApiResponse response"
     (with-redefs [plugin/handle-request (fn [_ _ _] {:response-code 200 :response-body "" :response-headers {}})]
       (is (response-equal (DefaultGoPluginApiResponse/success "\"\"")
-                          (plugin/handler (mock-client) (default-go-plugin-api-request nil)))))))
+                          (plugin/handler (mock-client-atom) (default-go-plugin-api-request nil)))))))
 
 
 (deftest handler-with-plugin-response
@@ -58,7 +58,7 @@
     (with-redefs [plugin/handle-request
                   (fn [_ _ _] {:response-code 200 :response-body {:message "hello"} :response-headers {}})]
       (is (response-equal (DefaultGoPluginApiResponse/success "{\"message\":\"hello\"}")
-                          (plugin/handler (mock-client) (default-go-plugin-api-request nil)))))))
+                          (plugin/handler (mock-client-atom) (default-go-plugin-api-request nil)))))))
 
 
 (deftest handler-with-json-response
@@ -66,12 +66,12 @@
     (let [response {:response-code 200 :response-headers {} :response-body {:try "this"}}]
       (with-redefs [plugin/handle-request (fn [_ _ _] response)]
         (is (response-equal (DefaultGoPluginApiResponse/success "{\"try\":\"this\"}")
-                            (plugin/handler (mock-client) (default-go-plugin-api-request nil))))))))
+                            (plugin/handler (mock-client-atom) (default-go-plugin-api-request nil))))))))
 
 ;; Endpoint Tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (deftest get-icon
   (testing "Get icon endpoint with well formed requests"
-    (let [result (plugin/handle-request (mock-client) "cd.go.secrets.get-icon" "")
+    (let [result (plugin/handle-request (mock-client-atom) "cd.go.secrets.get-icon" "")
           body (:response-body result)
           status (:response-code result)]
       (is "image/svg+xml"
@@ -80,10 +80,57 @@
       (is (= 200 status)))))
 
 
+(deftest validate
+  (testing "Validate correctly handles case with no errors (no false positives)"
+    (with-redefs [vault/new-client (fn [_] @(mock-client-atom))]
+      (let [result (plugin/handle-request
+                     (mock-client-atom) "cd.go.secrets.validate"
+                     {:vault_addr "https://amperity.com"})
+            body (:response-body result)
+            status (:response-code result)]
+        (is (= [] body))
+        (is (= 200 status)))))
+    (testing "Validate correctly handles case with errors (no false negatives, no false positives)"
+      (let [result (plugin/handle-request
+                     (mock-client-atom) "cd.go.secrets.validate"
+                     {:vault_addr "protocol://amperity.com"})
+            body (:response-body result)
+            status (:response-code result)]
+        (is (= [{:key :vault-addr
+                 :message "Vault URL must start with http:// or https://"}]
+               body))
+      (is (= 200 status))))
+  (testing "Validate also resets the vault client if a new URL is specified, when input is valid only"
+    (let [fake-client (atom nil)
+          result (plugin/handle-request
+                   fake-client "cd.go.secrets.validate"
+                   {:vault_addr "https://amperity.com"})
+          status (:response-code result)]
+      (is (= 200 status))
+      (is (some? @fake-client)))
+    (let [fake-client (atom nil)
+          result (plugin/handle-request
+                   fake-client "cd.go.secrets.validate"
+                   {:vault_addr "https://amperity.com"})
+          body (:response-body result)
+          status (:response-code result)]
+      (is (= 200 status))
+      (is (nil? @fake-client))))
+  (testing "Validate a does not reset the vault client if no new URL is specified "
+    (let [fake-client (atom nil)
+          result (plugin/handle-request
+                   fake-client "cd.go.secrets.validate"
+                   {})
+          body (:response-body result)
+          status (:response-code result)]
+      (is (= 200 status))
+      (is (nil? @fake-client)))))
+
+
 (deftest secrets-lookup
   (testing "Can look up secrets stored in vault given a well formed request"
     (let [result (plugin/handle-request
-                   (mock-client)
+                   (mock-client-atom)
                    "go.cd.secrets.secrets-lookup"
                    {:configuration {}
                     ;; The keys will likely be string in the http vault client instance,
@@ -97,7 +144,7 @@
              body))
       (is (= 200 status))))
   (testing "Fails cleanly when looking up secrets that don't exist"
-    (let [result (plugin/handle-request (mock-client) "go.cd.secrets.secrets-lookup"
+    (let [result (plugin/handle-request (mock-client-atom) "go.cd.secrets.secrets-lookup"
                                         {:configuration {}
                                          :keys          [:dr-who :jack-the-ripper]})
           body (:response-body result)
