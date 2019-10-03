@@ -9,6 +9,7 @@
     [vault.client.mock]
     [vault.core :as vault])
   (:import
+    clojure.lang.ExceptionInfo
     (com.thoughtworks.go.plugin.api
       GoApplicationAccessor
       GoPluginIdentifier)
@@ -137,10 +138,22 @@
 ;; request body will also have the configuration required to connect and lookup
 ;; for secrets from the external Secret Manager.
 (defmethod handle-request "go.cd.secrets.secrets-lookup"
-  [_ _ data]
-  ;; TODO: See https://plugin-api.gocd.org/19.7.0/secrets/#lookup-secrets for desired response
-  (let [configuration (:configuration data)
-        secret-keys (:keys data)]
-    {:response-code    500
-     :response-headers {}
-     :response-body    "NYI"}))
+  [client _ data]
+  (try
+    (let [secret-keys (:keys data)
+          secrets (mapv (fn [key]
+                          {:key   key
+                           :value (vault/read-secret client key {:not-found nil})})
+                        secret-keys)
+          missing-keys (mapv :key (remove :value secrets))]
+      (if (empty? missing-keys)
+        {:response-code    200
+         :response-headers {}
+         :response-body    secrets}
+        {:response-code    404
+         :response-headers {}
+         :response-body    {:message (str "Unable to resolve key(s) " missing-keys)}}))
+    (catch ExceptionInfo ex
+      {:response-code    500
+       :response-headers {}
+       :response-body    {:message (str "Error occurred during lookup:\n" ex)}})))
