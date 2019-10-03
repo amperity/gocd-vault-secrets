@@ -102,11 +102,12 @@
                                          :keys          [:dr-who :jack-the-ripper]})
           body (:response-body result)
           status (:response-code result)]
-      (is (= {:message "Unable to resolve key :dr-who"}
+      (is (= {:message "Unable to resolve key(s) [:dr-who :jack-the-ripper]"}
              body))
       (is (= 404 status))))
   (testing "Fails cleanly when other lookup error occurs"
-    (let [mock-client-that-errors (reify vault/SecretClient (read-secret [& _] (throw (ex-info "Mock Exception" {}))))
+    (let [mock-client-that-errors (reify vault.core/SecretClient
+                                    (read-secret [_ _ _] (throw (ex-info "Mock Exception" {}))))
           result (plugin/handle-request
                    mock-client-that-errors
                    "go.cd.secrets.secrets-lookup"

@@ -143,16 +143,17 @@
     (let [secret-keys (:keys data)
           secrets (mapv (fn [key]
                           {:key   key
-                           :value (vault/read-secret client key)})
-                        secret-keys)]
-      {:response-code    200
-       :response-headers {}
-       :response-body    secrets})
-    (catch ExceptionInfo ex
-      (if (= "No such secret" (first (str/split (ex-message ex) #":")))
+                           :value (vault/read-secret client key {:not-found nil})})
+                        secret-keys)
+          filtered_secret_keys (mapv :key (filter #(nil? (:value %)) secrets))]
+      (if (empty? filtered_secret_keys)
+        {:response-code    200
+         :response-headers {}
+         :response-body    secrets}
         {:response-code    404
          :response-headers {}
-         :response-body    {:message (str "Unable to resolve key " (:secret (ex-data ex)))}}
-        {:response-code    500
-         :response-headers {}
-         :response-body    {:message (str "Error occurred during lookup:\n " ex)}}))))
+         :response-body    {:message (str "Unable to resolve key(s) " filtered_secret_keys)}}))
+    (catch ExceptionInfo ex
+      {:response-code    500
+       :response-headers {}
+       :response-body    {:message (str "Error occurred during lookup:\n " ex)}})))
