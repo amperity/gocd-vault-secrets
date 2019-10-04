@@ -35,7 +35,7 @@
   [logger app-accessor]
   (alter-var-root #'log/logger (constantly logger))
   ;; TODO: actually initialize a Vault client
-  nil)
+  (atom nil))
 
 
 ;; ## Request Handling
@@ -49,7 +49,7 @@
   ```
 
   Params:
-  - `client`: vault.client, used for auth and retrieval of all the secret values
+  - `client`: Atom(vault.client), used for auth and retrieval of all the secret values
   - `req-name`: string, determines how to dispatch among implementing methods, essentially the route
   - `data`: map, the body of the message passed from the GoCD server"
   (fn dispatch
@@ -143,7 +143,7 @@
     (let [secret-keys (:keys data)
           secrets (mapv (fn [key]
                           {:key   key
-                           :value (vault/read-secret client key {:not-found nil})})
+                           :value (vault/read-secret @client key {:not-found nil})})
                         secret-keys)
           missing-keys (mapv :key (remove :value secrets))]
       (if (empty? missing-keys)

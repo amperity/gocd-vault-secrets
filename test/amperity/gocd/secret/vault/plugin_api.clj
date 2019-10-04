@@ -81,50 +81,50 @@
 
 
 (deftest validate
-  (testing "Validate correctly handles case with no errors (no false positives)"
-    (with-redefs [vault/new-client (fn [_] @(mock-client-atom))]
+  (with-redefs [vault/authenticate! (fn [_ _ _] true)]
+    (testing "Validate correctly handles case with no errors (no false positives)"
       (let [result (plugin/handle-request
                      (mock-client-atom) "cd.go.secrets.validate"
                      {:vault_addr "https://amperity.com"})
             body (:response-body result)
             status (:response-code result)]
         (is (= [] body))
-        (is (= 200 status)))))
+        (is (= 200 status))))
     (testing "Validate correctly handles case with errors (no false negatives, no false positives)"
       (let [result (plugin/handle-request
                      (mock-client-atom) "cd.go.secrets.validate"
                      {:vault_addr "protocol://amperity.com"})
             body (:response-body result)
             status (:response-code result)]
-        (is (= [{:key :vault-addr
+        (is (= [{:key     :vault-addr
                  :message "Vault URL must start with http:// or https://"}]
                body))
-      (is (= 200 status))))
-  (testing "Validate also resets the vault client if a new URL is specified, when input is valid only"
-    (let [fake-client (atom nil)
-          result (plugin/handle-request
-                   fake-client "cd.go.secrets.validate"
-                   {:vault_addr "https://amperity.com"})
-          status (:response-code result)]
-      (is (= 200 status))
-      (is (some? @fake-client)))
-    (let [fake-client (atom nil)
-          result (plugin/handle-request
-                   fake-client "cd.go.secrets.validate"
-                   {:vault_addr "https://amperity.com"})
-          body (:response-body result)
-          status (:response-code result)]
-      (is (= 200 status))
-      (is (nil? @fake-client))))
-  (testing "Validate a does not reset the vault client if no new URL is specified "
-    (let [fake-client (atom nil)
-          result (plugin/handle-request
-                   fake-client "cd.go.secrets.validate"
-                   {})
-          body (:response-body result)
-          status (:response-code result)]
-      (is (= 200 status))
-      (is (nil? @fake-client)))))
+        (is (= 200 status))))
+    (testing "Validate also resets the vault client if a new URL is specified, when input is valid only"
+      (let [fake-client (atom nil)
+            result (plugin/handle-request
+                     fake-client "cd.go.secrets.validate"
+                     {:vault_addr "https://amperity.com"})
+            status (:response-code result)]
+        (is (= 200 status))
+        (is (some? @fake-client)))
+      (let [fake-client (atom nil)
+            result (plugin/handle-request
+                     fake-client "cd.go.secrets.validate"
+                     {:vault_addr "https://amperity.com"})
+            body (:response-body result)
+            status (:response-code result)]
+        (is (= 200 status))
+        (is (nil? @fake-client))))
+    (testing "Validate a does not reset the vault client if no new URL is specified "
+      (let [fake-client (atom nil)
+            result (plugin/handle-request
+                     fake-client "cd.go.secrets.validate"
+                     {})
+            body (:response-body result)
+            status (:response-code result)]
+        (is (= 200 status))
+        (is (nil? @fake-client))))))
 
 
 (deftest secrets-lookup
@@ -156,7 +156,7 @@
     (let [mock-client-that-errors (reify vault.core/SecretClient
                                     (read-secret [_ _ _] (throw (ex-info "Mock Exception" {}))))
           result (plugin/handle-request
-                   mock-client-that-errors
+                   (atom mock-client-that-errors)
                    "go.cd.secrets.secrets-lookup"
                    {:configuration {}
                     :keys          [:batman]})
