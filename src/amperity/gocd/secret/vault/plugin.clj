@@ -27,15 +27,20 @@
 ;; ## Plugin Initialization
 
 (defn initialize!
-  ; 1. Access app info using app accessor to determine url, app-id, etc.
-  ; 2. Create a vault client
-  ; 3. Authenticate the vault client
-  ; 4. Return the vault client
   "Set up the vault client."
   [logger app-accessor]
   (alter-var-root #'log/logger (constantly logger))
-  ;; TODO: actually initialize a Vault client
   (atom nil))
+
+
+;; ## Model
+
+;; A map of user configurable fields to the all the data necessary to define those fields
+(def input-fields
+  {:vault_addr {:metadata       {:required true :secure false}
+                :label          "Vault URL"
+                :validate-funcs [{:func  #(or (str/starts-with? % "http://") (str/starts-with? % "https://"))
+                                  :error "Vault URL must start with http:// or https://"}]}})
 
 
 ;; ## Request Handling
@@ -113,22 +118,49 @@
   ;; TODO: how does the plugin authenticate?
   {:response-code    200
    :response-headers {}
-   :response-body    [{:key      :vault_addr
-                       :metadata {:required true :secure false}}]})
+   :response-body    (mapv (fn [] {:key %
+                                   :metadata (-> input-fields % :metadata)})
+                           (keys input-fields))})
+
+
+(defn- input-error-message
+  "If the input field is valid, does nothing, if it's not, returns a string describing the error.
+
+  Params:
+  - `field-key`: the input field you are validating
+  - `field-value`: the inputted value which you wish to verify
+  - `field-label`: the human readable representation of the field key"
+  [field-key field-value]
+  (let [field-model (field-key input-fields)
+        validate-func-errors (filter #((:func %) field-value)
+                                     (:validate-funcs field-model))]
+    (cond
+      ;; field is required but empty
+      (and (-> field-model :metadata :required) (str/blank? field-value))
+       (str (:label field-model) " is required")
+
+      ;; field is not empty or is not required
+      (not (empty? validate-func-errors))
+      (:error (first validate-func-errors))
+
+      :else
+      nil)))
 
 
 ;; This call is expected to validate the user inputs that form a part of
 ;; the secret backend configuration.
-(defmethod handle-request "go.cd.screts.validate"
-  [_ _ data]
-  (letfn [(validate-string
-            [field-key label]
-            (when (str/blank? (get data field-key))
-              {:key     field-key
-               :message (str label " is required")}))]
+(defmethod handle-request "go.cd.secrets.validate"
+  [client _ data]
+  (let [input-error (fn [field-key]
+                          {:key   field-key
+                           :error (input-error-message field-key (field-key data))})
+        errors-found (filterv :error (map input-error (keys input-fields)))]
+    #_ ;; TODO: Work out authentication!!!
+    (when (empty? errors-found)
+      (vault/authenticate! client ))
     {:response-code    200
      :response-headers {}
-     :response-body    (into [] (remove nil?) [(validate-string :vault_addr "Vault URL")])}))
+     :response-body   errors-found}))
 
 
 ;; ## Secret Usage
