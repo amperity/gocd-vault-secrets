@@ -37,9 +37,15 @@
 
 ;; A map of user configurable fields to the all the data necessary to define those fields
 (def input-schema
-  {:vault_addr {:metadata       {:required true :secure false}
+  {;; the name of the corresponding input field
+   :vault_addr {;; the metadata required by the plugin API about every input field
+                :metadata       {:required true :secure false}
+                ;; the string representation of the URL
                 :label          "Vault URL"
-                :validate-funcs [{:func  #(or (str/starts-with? % "http://") (str/starts-with? % "https://"))
+                ;; an array outlining extended validation the function may require
+                :validate-funcs [{;; true if valid, false if not
+                                  :func  #(or (str/starts-with? % "http://") (str/starts-with? % "https://"))
+                                  ;; the error message to be shown to the user when this pred is false
                                   :message "Vault URL must start with http:// or https://"}]}
    :auth_method {:metadata      {:required true :secure false}
                  :label         "Authentication Method"
@@ -122,7 +128,6 @@
 ;; configuring a secret backend in GoCD.
 (defmethod handle-request "go.cd.secrets.get-metadata"
   [_ _ _]
-  ;; TODO: how does the plugin authenticate?
   {:response-code    200
    :response-headers {}
    :response-body    (mapv (fn [input-key]
