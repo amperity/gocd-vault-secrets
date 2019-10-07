@@ -36,11 +36,18 @@
 ;; ## Model
 
 ;; A map of user configurable fields to the all the data necessary to define those fields
-(def input-fields
+(def input-schema
   {:vault_addr {:metadata       {:required true :secure false}
                 :label          "Vault URL"
                 :validate-funcs [{:func  #(or (str/starts-with? % "http://") (str/starts-with? % "https://"))
-                                  :error "Vault URL must start with http:// or https://"}]}})
+                                  :message "Vault URL must start with http:// or https://"}]}
+   :auth_method {:metadata      {:required true :secure false}
+                 :label         "Authentication Method"
+                 :validate-funcs []}
+   :vault_token {:metadata      {:required false :secure true}
+                 :label         "Vault Token"
+                 :validate-funcs [{:func string?
+                                   :message "Vault Token must be a string"}]}})
 
 
 ;; ## Request Handling
@@ -118,9 +125,9 @@
   ;; TODO: how does the plugin authenticate?
   {:response-code    200
    :response-headers {}
-   :response-body    (mapv (fn [] {:key %
-                                   :metadata (-> input-fields % :metadata)})
-                           (keys input-fields))})
+   :response-body    (mapv (fn [input-key] {:key      input-key
+                                            :metadata (-> input-schema input-key :metadata)})
+                           (keys input-schema))})
 
 
 (defn- input-error-message
@@ -131,36 +138,63 @@
   - `field-value`: the inputted value which you wish to verify
   - `field-label`: the human readable representation of the field key"
   [field-key field-value]
-  (let [field-model (field-key input-fields)
-        validate-func-errors (filter #((:func %) field-value)
+  (let [field-model (field-key input-schema)
+        validate-func-errors (remove #((:func %)  field-value)
                                      (:validate-funcs field-model))]
     (cond
       ;; field is required but empty
       (and (-> field-model :metadata :required) (str/blank? field-value))
        (str (:label field-model) " is required")
 
-      ;; field is not empty or is not required
-      (not (empty? validate-func-errors))
-      (:error (first validate-func-errors))
+      ;; field is not empty and there is an error
+      (not (or (str/blank? field-value) (empty? validate-func-errors)))
+      (:message (first validate-func-errors))
 
       :else
       nil)))
 
+
+(defn- authenticate-client-from-inputs!
+  "Authenticates the Vault Client
+
+  Params:
+  - `client` The Vault Client you wish to authenticate
+  - `inputs` A map containing the user inputted settings for the plugin"
+  [client inputs]
+  (case (keyword (:auth_method inputs))
+    :token
+    (vault/authenticate! client :token (:vault_token inputs))))
 
 ;; This call is expected to validate the user inputs that form a part of
 ;; the secret backend configuration.
 (defmethod handle-request "go.cd.secrets.validate"
   [client _ data]
   (let [input-error (fn [field-key]
-                          {:key   field-key
-                           :error (input-error-message field-key (field-key data))})
-        errors-found (filterv :error (map input-error (keys input-fields)))]
-    #_ ;; TODO: Work out authentication!!!
-    (when (empty? errors-found)
-      (vault/authenticate! client ))
-    {:response-code    200
-     :response-headers {}
-     :response-body   errors-found}))
+                      {:key   field-key
+                       :message (input-error-message field-key (field-key data))})
+        errors-found (filterv :message (map input-error (keys input-schema)))]
+    (if (and (empty? errors-found)
+             ;; Need to Authenticate?
+             (not (and (= (:api-url @client) (:vault_addr data))
+                       (= (:auth-type @client) (:auth_method data))
+                       (= (:client-token @client) (:vault_token data)))))
+      ;; Authenticate Vault client
+      (try
+        (when (nil? @client)
+          (reset! client (vault/new-client (:vault_addr data))))
+        (authenticate-client-from-inputs! @client data)
+        {:response-code 200
+         :response-headers {}
+         :response-body []}
+
+        (catch Exception ex
+          {:response-code 200
+           :response-headers {}
+           :response-body [{:key :auth_method
+                            :message (str "Unable to authenticate Vault client:\n" ex)}]}))
+      {:response-code    200
+       :response-headers {}
+       :response-body    errors-found})))
 
 
 ;; ## Secret Usage
