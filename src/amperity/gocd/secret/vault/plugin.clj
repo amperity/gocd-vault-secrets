@@ -125,8 +125,9 @@
   ;; TODO: how does the plugin authenticate?
   {:response-code    200
    :response-headers {}
-   :response-body    (mapv (fn [input-key] {:key      input-key
-                                            :metadata (-> input-schema input-key :metadata)})
+   :response-body    (mapv (fn [input-key]
+                             {:key      input-key
+                              :metadata (-> input-schema input-key :metadata)})
                            (keys input-schema))})
 
 
@@ -144,7 +145,7 @@
     (cond
       ;; field is required but empty
       (and (-> field-model :metadata :required) (str/blank? field-value))
-       (str (:label field-model) " is required")
+      (str (:label field-model) " is required")
 
       ;; field is not empty and there is an error
       (not (or (str/blank? field-value) (empty? validate-func-errors)))
@@ -164,6 +165,7 @@
   (case (keyword (:auth_method inputs))
     :token
     (vault/authenticate! client :token (:vault_token inputs))))
+
 
 ;; This call is expected to validate the user inputs that form a part of
 ;; the secret backend configuration.
