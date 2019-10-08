@@ -105,9 +105,10 @@
         (is (= 200 status))))
     (testing "Validate also resets the vault client if a new URL is specified, when input is valid only"
       (with-redefs [plugin/authenticate-client-from-inputs!
-                    (fn [_ i1] (is (= {:auth_method "token"
-                                       :vault_addr  "https://amperity.com"}
-                                      i1)))]
+                    (fn [_ i1]
+                      (is (= {:auth_method "token"
+                              :vault_addr  "https://amperity.com"}
+                             i1)))]
         (let [fake-client (atom nil)
               result (plugin/handle-request
                        fake-client "go.cd.secrets.validate"
