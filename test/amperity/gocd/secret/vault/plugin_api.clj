@@ -86,7 +86,8 @@
       (let [result (plugin/handle-request
                      (mock-client-atom) "go.cd.secrets.validate"
                      {:vault_addr "https://amperity.com"
-                      :auth_method "token"})
+                      :auth_method "token"
+                      :vault_token "abc123"})
             body (:response-body result)
             status (:response-code result)]
         (is (= [] body))

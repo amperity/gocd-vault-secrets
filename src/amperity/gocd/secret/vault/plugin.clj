@@ -187,7 +187,7 @@
                        (= (:client-token @client) (:vault_token data)))))
       ;; Authenticate Vault client
       (try
-        (when (nil? @client)
+        (when (not (= (:api-url @client) (:vault_addr data)))
           (reset! client (vault/new-client (:vault_addr data))))
         (authenticate-client-from-inputs! @client data)
         {:response-code 200
