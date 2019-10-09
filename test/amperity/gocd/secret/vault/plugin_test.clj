@@ -1,4 +1,4 @@
-(ns amperity.gocd.secret.vault.plugin-api
+(ns amperity.gocd.secret.vault.plugin-test
   (:require
     [amperity.gocd.secret.vault.plugin :as plugin]
     [amperity.gocd.secret.vault.util :as u]

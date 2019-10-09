@@ -169,7 +169,10 @@
   [client inputs]
   (case (keyword (:auth_method inputs))
     :token
-    (vault/authenticate! client :token (:vault_token inputs))))
+    (vault/authenticate! client :token (:vault_token inputs))
+
+    (throw (ex-info "Could not recognize user inputted vault auth type"
+                    {:user-input (keyword (:auth_method inputs))}))))
 
 
 ;; This call is expected to validate the user inputs that form a part of
