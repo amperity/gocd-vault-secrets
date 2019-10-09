@@ -124,7 +124,6 @@
               result (plugin/handle-request
                        fake-client "go.cd.secrets.validate"
                        {:vault_addr "https://amperity.com"})
-              body (:response-body result)
               status (:response-code result)]
           (is (= 200 status))
           (is (nil? @fake-client)))))
@@ -133,7 +132,6 @@
             result (plugin/handle-request
                      fake-client "go.cd.secrets.validate"
                      {})
-            body (:response-body result)
             status (:response-code result)]
         (is (= 200 status))
         (is (nil? @fake-client)))))
@@ -151,6 +149,17 @@
 java.lang.IllegalArgumentException: Token credential must be a string"}]
              body))
       (is (some? @fake-client)))))
+
+
+(deftest get-metadata
+  (testing "Input metadata is returned with the correctly structured response"
+    (let [result (plugin/handle-request (mock-client-atom) "go.cd.secrets.get-metadata" {})
+          body (:response-body result)
+          status (:response-code result)]
+      (is (= 200 status))
+      (is (not (empty? body)))
+      (is (every? :key body))
+      (is (every? #(and (contains? % :required) (contains? % :secure)) (map :metadata body))))))
 
 
 (deftest secrets-lookup
