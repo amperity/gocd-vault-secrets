@@ -148,6 +148,19 @@
                :message "Unable to authenticate Vault client:
 java.lang.IllegalArgumentException: Token credential must be a string"}]
              body))
+      (is (some? @fake-client)))
+    (let [fake-client (atom nil)
+          result (plugin/handle-request
+                   fake-client "go.cd.secrets.validate"
+                   {:vault_addr  "https://amperity.com"
+                    :auth_method "fake-id-mclovin"})
+          body (:response-body result)
+          status (:response-code result)]
+      (is (= 200 status))
+      (is (= [{:key     :auth_method
+               :message "Unable to authenticate Vault client:
+clojure.lang.ExceptionInfo: Could not recognize user inputted vault auth type {:user-input :fake-id-mclovin}"}]
+             body))
       (is (some? @fake-client)))))
 
 
