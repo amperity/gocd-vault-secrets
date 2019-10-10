@@ -6,7 +6,6 @@
     [clojure.java.io :as io]
     [clojure.string :as str]
     [vault.client.http]
-    [vault.client.mock]
     [vault.core :as vault])
   (:import
     clojure.lang.ExceptionInfo

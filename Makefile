@@ -23,7 +23,7 @@ $(plugin_path): $(uberjar_path)
 	cd target/plugin; jar xf ../../$(uberjar_path)
 	find target/plugin -type f -path 'target/plugin/clojure/repl*' -delete
 	find target/plugin -type d -empty -delete
-	cd target/plugin; jar cmf META-INF/MANIFEST.MF $(plugin_name) plugin.xml amperity clojure
+	cd target/plugin; jar cmf META-INF/MANIFEST.MF $(plugin_name) plugin.xml amperity vault clojure com cheshire org clj_http
 
 plugin: $(plugin_path)
 
