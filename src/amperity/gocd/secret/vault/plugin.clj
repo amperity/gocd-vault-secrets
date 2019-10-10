@@ -160,7 +160,7 @@
     :token
     (vault/authenticate! client :token (:vault_token inputs))
 
-    (throw (ex-info "Could not recognize user inputted vault auth type"
+    (throw (ex-info "Unhandled vault auth type"
                     {:user-input (keyword (:auth_method inputs))}))))
 
 
@@ -169,9 +169,10 @@
 (defmethod handle-request "go.cd.secrets.validate"
   [client _ data]
   (let [input-error (fn [field-key]
-                      {:key   field-key
-                       :message (input-error-message field-key (field-key data))})
-        errors-found (filterv :message (map input-error (keys input-schema)))]
+                      (when-let [error-message (input-error-message field-key (field-key data))]
+                        {:key field-key
+                         :message error-message}))
+        errors-found (keep input-error (keys input-schema))]
     (if (and (empty? errors-found)
              ;; Need to Authenticate?
              (not (and (= (:api-url @client) (:vault_addr data))
@@ -193,7 +194,7 @@
                             :message (str "Unable to authenticate Vault client:\n" ex)}]}))
       {:response-code    200
        :response-headers {}
-       :response-body    errors-found})))
+       :response-body    (into [] errors-found)})))
 
 
 ;; ## Secret Usage
@@ -207,7 +208,7 @@
   (try
     (let [secret-keys (:keys data)
           secrets (mapv (fn [key]
-                          {:key   key
+                          {:key key
                            :value (vault/read-secret @client key {:not-found nil})})
                         secret-keys)
           missing-keys (mapv :key (remove :value secrets))]

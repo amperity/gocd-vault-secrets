@@ -159,7 +159,7 @@ java.lang.IllegalArgumentException: Token credential must be a string"}]
       (is (= 200 status))
       (is (= [{:key     :auth_method
                :message "Unable to authenticate Vault client:
-clojure.lang.ExceptionInfo: Could not recognize user inputted vault auth type {:user-input :fake-id-mclovin}"}]
+clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input :fake-id-mclovin}"}]
              body))
       (is (some? @fake-client)))))
 
