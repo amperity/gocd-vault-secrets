@@ -46,11 +46,16 @@
 
 ;; Common Logic Tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Handler Tests
+(defn default-handler
+  "Thunk that sends an empty request, using a a mock client"
+  []
+  (plugin/handler (mock-client-atom) (default-go-plugin-api-request nil)))
+
 (deftest handler-with-nil-response
   (testing "Handler when handle-method returns a GoPluginApiResponse response"
     (with-redefs [plugin/handle-request (fn [_ _ _] {:response-code 200 :response-body "" :response-headers {}})]
       (is (response-equal (DefaultGoPluginApiResponse/success "\"\"")
-                          (plugin/handler (mock-client-atom) (default-go-plugin-api-request nil)))))))
+                          (default-handler))))))
 
 
 (deftest handler-with-plugin-response
@@ -58,7 +63,7 @@
     (with-redefs [plugin/handle-request
                   (fn [_ _ _] {:response-code 200 :response-body {:message "hello"} :response-headers {}})]
       (is (response-equal (DefaultGoPluginApiResponse/success "{\"message\":\"hello\"}")
-                          (plugin/handler (mock-client-atom) (default-go-plugin-api-request nil)))))))
+                          (default-handler))))))
 
 
 (deftest handler-with-json-response
@@ -66,7 +71,7 @@
     (let [response {:response-code 200 :response-headers {} :response-body {:try "this"}}]
       (with-redefs [plugin/handle-request (fn [_ _ _] response)]
         (is (response-equal (DefaultGoPluginApiResponse/success "{\"try\":\"this\"}")
-                            (plugin/handler (mock-client-atom) (default-go-plugin-api-request nil))))))))
+                            (default-handler)))))))
 
 ;; Endpoint Tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (deftest get-icon
@@ -76,7 +81,7 @@
           status (:response-code result)]
       (is "image/svg+xml"
           (:content_type body))
-      (is (:data body))
+      (is (some? (:data body)))
       (is (= 200 status)))))
 
 
@@ -106,10 +111,10 @@
         (is (= 200 status))))
     (testing "Validate also resets the vault client if a new URL is specified, when input is valid only"
       (with-redefs [plugin/authenticate-client-from-inputs!
-                    (fn [_ i1]
+                    (fn [_ inputs]
                       (is (= {:auth_method "token"
                               :vault_addr  "https://amperity.com"}
-                             i1)))]
+                             inputs)))]
         (let [fake-client (atom nil)
               result (plugin/handle-request
                        fake-client "go.cd.secrets.validate"
