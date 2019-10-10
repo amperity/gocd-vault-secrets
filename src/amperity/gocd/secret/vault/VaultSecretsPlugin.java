@@ -30,7 +30,7 @@ public class VaultSecretsPlugin implements GoPlugin {
      */
     @Override
     public GoPluginIdentifier pluginIdentifier() {
-        return new GoPluginIdentifier("elastic-agent", Arrays.asList("5.0"));
+        return new GoPluginIdentifier("secrets", Arrays.asList("1.0"));
     }
 
 

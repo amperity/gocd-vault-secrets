@@ -9,6 +9,8 @@ gocd-vault-secrets
 A plugin for [GoCD](https://www.gocd.org/) providing secret material support via
 [HashiCorp Vault](https://www.vaultproject.io/).
 
+There is not yet a stable release of this plugin.
+
 <br/>
 
 
