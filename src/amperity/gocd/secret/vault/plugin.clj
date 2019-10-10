@@ -37,22 +37,21 @@
 ;; A map of user configurable fields to the all the data necessary to define those fields
 (def input-schema
   {;; the name of the corresponding input field
-   :vault_addr {;; the metadata required by the plugin API about every input field
-                :metadata       {:required true :secure false}
-                ;; the string representation of the URL
-                :label          "Vault URL"
-                ;; an array outlining extended validation the function may require
-                :validate-funcs [{;; true if valid, false if not
-                                  :func  #(or (str/starts-with? % "http://") (str/starts-with? % "https://"))
-                                  ;; the error message to be shown to the user when this pred is false
-                                  :message "Vault URL must start with http:// or https://"}]}
-   :auth_method {:metadata      {:required true :secure false}
-                 :label         "Authentication Method"
-                 :validate-funcs []}
-   :vault_token {:metadata      {:required false :secure true}
-                 :label         "Vault Token"
-                 :validate-funcs [{:func string?
-                                   :message "Vault Token must be a string"}]}})
+   :vault_addr  {;; the metadata required by the plugin API about every input field
+                 :metadata     {:required true :secure false}
+                 ;; the string representation of the URL
+                 :label        "Vault URL"
+                 ;; an array outlining extended validation the function may require
+                 :validate-fns [;; nil if no error detected, else a string descring the error
+                                #(when-not (or (str/starts-with? % "http://") (str/starts-with? % "https://"))
+                                   "Vault URL must start with http:// or https://")]}
+   :auth_method {:metadata     {:required true :secure false}
+                 :label        "Authentication Method"
+                 :validate-fns []}
+   :vault_token {:metadata     {:required false :secure true}
+                 :label        "Vault Token"
+                 :validate-fns [#(when-not (string? %)
+                                   "Vault Token must be a string")]}})
 
 
 ;; ## Request Handling
@@ -142,20 +141,12 @@
   - `field-key`: the input field you are validating
   - `field-value`: the inputted value which you wish to verify"
   [field-key field-value]
-  (let [field-model (field-key input-schema)
-        validate-func-errors (remove #((:func %)  field-value)
-                                     (:validate-funcs field-model))]
-    (cond
+  (let [field-model (field-key input-schema)]
+    (if (and (-> field-model :metadata :required) (str/blank? field-value))
       ;; field is required but empty
-      (and (-> field-model :metadata :required) (str/blank? field-value))
       (str (:label field-model) " is required")
-
-      ;; field is not empty and there is an error
-      (not (or (str/blank? field-value) (empty? validate-func-errors)))
-      (:message (first validate-func-errors))
-
-      :else
-      nil)))
+      (when-not (str/blank? field-value)
+        (some #(% field-value) (:validate-fns field-model))))))
 
 
 (defn- authenticate-client-from-inputs!
