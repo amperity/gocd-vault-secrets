@@ -71,7 +71,7 @@
 ;; Endpoint Tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (deftest get-icon
   (testing "Get icon endpoint with well formed requests"
-    (let [result (plugin/handle-request (mock-client-atom) "cd.go.secrets.get-icon" "")
+    (let [result (plugin/handle-request (mock-client-atom) "go.cd.secrets.get-icon" "")
           body (:response-body result)
           status (:response-code result)]
       (is "image/svg+xml"
@@ -166,7 +166,7 @@ clojure.lang.ExceptionInfo: Could not recognize user inputted vault auth type {:
 
 (deftest get-metadata
   (testing "Input metadata is returned with the correctly structured response"
-    (let [result (plugin/handle-request (mock-client-atom) "go.cd.secrets.get-metadata" {})
+    (let [result (plugin/handle-request (mock-client-atom) "go.cd.secrets.secrets-config.get-metadata" {})
           body (:response-body result)
           status (:response-code result)]
       (is (= 200 status))

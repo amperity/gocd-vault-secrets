@@ -102,7 +102,7 @@
 
 ;; This call is expected to return the icon for the plugin, so as to make
 ;; it easy for users to identify the plugin.
-(defmethod handle-request "cd.go.secrets.get-icon"
+(defmethod handle-request "go.cd.secrets.get-icon"
   [_ _ _]
   (let [icon-svg (slurp (io/resource "amperity/gocd/secret/vault/logo.svg"))]
     {:response-code    200
@@ -115,7 +115,7 @@
 
 ;; This message should return an HTML template allowing users to configure the
 ;; secret backend in GoCD.
-(defmethod handle-request "go.cd.secrets.get-view"
+(defmethod handle-request "go.cd.secrets.secrets-config.get-view"
   [_ _ _]
   (let [view-html (slurp (io/resource "amperity/gocd/secret/vault/secrets-view.html"))]
     {:response-code    200
@@ -125,7 +125,7 @@
 
 ;; This message should return metadata about the available settings for
 ;; configuring a secret backend in GoCD.
-(defmethod handle-request "go.cd.secrets.get-metadata"
+(defmethod handle-request "go.cd.secrets.secrets-config.get-metadata"
   [_ _ _]
   {:response-code    200
    :response-headers {}
@@ -140,8 +140,7 @@
 
   Params:
   - `field-key`: the input field you are validating
-  - `field-value`: the inputted value which you wish to verify
-  - `field-label`: the human readable representation of the field key"
+  - `field-value`: the inputted value which you wish to verify"
   [field-key field-value]
   (let [field-model (field-key input-schema)
         validate-func-errors (remove #((:func %)  field-value)
@@ -160,7 +159,7 @@
 
 
 (defn- authenticate-client-from-inputs!
-  "Authenticates the Vault Client
+  "Authenticates the Vault Client.
 
   Params:
   - `client` The Vault Client you wish to authenticate
