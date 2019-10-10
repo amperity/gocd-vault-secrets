@@ -51,6 +51,7 @@
   []
   (plugin/handler (mock-client-atom) (default-go-plugin-api-request nil)))
 
+
 (deftest handler-with-nil-response
   (testing "Handler when handle-method returns a GoPluginApiResponse response"
     (with-redefs [plugin/handle-request (fn [_ _ _] {:response-code 200 :response-body "" :response-headers {}})]
