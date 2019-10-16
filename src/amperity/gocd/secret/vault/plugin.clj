@@ -166,7 +166,7 @@
 
 ;; This call is expected to validate the user inputs that form a part of
 ;; the secret backend configuration.
-(defmethod handle-request "go.cd.secrets.validate"
+(defmethod handle-request "go.cd.secrets.secrets-config.validate"
   [client _ data]
   (let [input-error (fn [field-key]
                       (when-let [error-message (input-error-message field-key (field-key data))]
