@@ -207,15 +207,15 @@
   [client _ data]
   (try
     (let [secret-keys (:keys data)
-          secrets (mapv (fn [key]
+          secrets (map (fn [key]
                           {:key key
-                           :value (str (vault/read-secret @client key {:not-found nil}))})
+                           :value (vault/read-secret @client key {:not-found nil})})
                         secret-keys)
           missing-keys (mapv :key (remove :value secrets))]
       (if (empty? missing-keys)
         {:response-code    200
          :response-headers {}
-         :response-body    secrets}
+         :response-body    (mapv #(update % :value str) secrets)}
         {:response-code    404
          :response-headers {}
          :response-body    {:message (str "Unable to resolve key(s) " missing-keys)}}))

@@ -90,7 +90,7 @@
   (with-redefs [vault/authenticate! (fn [_ _ _] true)]
     (testing "Validate correctly handles case with no errors (no false positives)"
       (let [result (plugin/handle-request
-                     (mock-client-atom) "go.cd.secrets.validate"
+                     (mock-client-atom) "go.cd.secrets.secrets-config.validate"
                      {:vault_addr "https://amperity.com"
                       :auth_method "token"
                       :vault_token "abc123"})
@@ -100,7 +100,7 @@
         (is (= 200 status))))
     (testing "Validate correctly handles case with errors (no false negatives, no false positives)"
       (let [result (plugin/handle-request
-                     (mock-client-atom) "go.cd.secrets.validate"
+                     (mock-client-atom) "go.cd.secrets.secrets-config.validate"
                      {:vault_addr "protocol://amperity.com"})
             body (:response-body result)
             status (:response-code result)]
@@ -118,7 +118,7 @@
                              inputs)))]
         (let [fake-client (atom nil)
               result (plugin/handle-request
-                       fake-client "go.cd.secrets.validate"
+                       fake-client "go.cd.secrets.secrets-config.validate"
                        {:vault_addr  "https://amperity.com"
                         :auth_method "token"})
               body (:response-body result)
@@ -128,7 +128,7 @@
           (is (some? @fake-client)))
         (let [fake-client (atom nil)
               result (plugin/handle-request
-                       fake-client "go.cd.secrets.validate"
+                       fake-client "go.cd.secrets.secrets-config.validate"
                        {:vault_addr "https://amperity.com"})
               status (:response-code result)]
           (is (= 200 status))
@@ -136,7 +136,7 @@
     (testing "Validate a does not reset the vault client if no new URL is specified "
       (let [fake-client (atom nil)
             result (plugin/handle-request
-                     fake-client "go.cd.secrets.validate"
+                     fake-client "go.cd.secrets.secrets-config.validate"
                      {})
             status (:response-code result)]
         (is (= 200 status))
@@ -144,7 +144,7 @@
   (testing "Validate also returns client authentication errors"
     (let [fake-client (atom nil)
           result (plugin/handle-request
-                   fake-client "go.cd.secrets.validate"
+                   fake-client "go.cd.secrets.secrets-config.validate"
                    {:vault_addr  "https://amperity.com"
                     :auth_method "token"})
           body (:response-body result)
@@ -157,7 +157,7 @@ java.lang.IllegalArgumentException: Token credential must be a string"}]
       (is (some? @fake-client)))
     (let [fake-client (atom nil)
           result (plugin/handle-request
-                   fake-client "go.cd.secrets.validate"
+                   fake-client "go.cd.secrets.secrets-config.validate"
                    {:vault_addr  "https://amperity.com"
                     :auth_method "fake-id-mclovin"})
           body (:response-body result)
