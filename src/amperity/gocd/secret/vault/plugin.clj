@@ -209,7 +209,7 @@
     (let [secret-keys (:keys data)
           secrets (mapv (fn [key]
                           {:key key
-                           :value (vault/read-secret @client key {:not-found nil})})
+                           :value (str (vault/read-secret @client key {:not-found nil}))})
                         secret-keys)
           missing-keys (mapv :key (remove :value secrets))]
       (if (empty? missing-keys)
