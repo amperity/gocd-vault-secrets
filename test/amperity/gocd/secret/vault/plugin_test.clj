@@ -1,7 +1,6 @@
 (ns amperity.gocd.secret.vault.plugin-test
   (:require
     [amperity.gocd.secret.vault.plugin :as plugin]
-    [amperity.gocd.secret.vault.util :as u]
     [clojure.test :refer [testing deftest is]]
     [vault.client.mock]
     [vault.core :as vault])
@@ -192,9 +191,9 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input :fake-id-mclo
                     :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
           body (:response-body result)
           status (:response-code result)]
-      (is (= [{:key :identities#batman :value "Bruce Wayne"}
-              {:key :identities#hulk :value "Bruce Banner"}
-              {:key :identities#wonder-woman :value "Diana Prince"}]
+      (is (= [{:key "identities#batman" :value "Bruce Wayne"}
+              {:key "identities#hulk" :value "Bruce Banner"}
+              {:key "identities#wonder-woman" :value "Diana Prince"}]
              body))
       (is (= 200 status))))
   (testing "Fails cleanly when looking up secrets that don't exist"

@@ -198,6 +198,40 @@
 
 
 ;; ## Secret Usage
+(defn- lookup-paths
+  "Creates a map from Vault paths (as keywords) to their corresponding secret data (defaults to nil)
+
+  Params:
+  - `client`: The vault.client you want to use to access Vault
+  - `paths`: A seq containing all paths you wish to look up (as strings or keywords), duplicates are fine."
+  [client paths]
+  (letfn [;; Makes a vector containing the path and that paths data
+          (lookup-path [path]
+            [(keyword path)
+             (vault/read-secret client path {:not-found nil})])]
+    (into {} (map lookup-path (into #{} paths)))))
+
+
+(defn- lookup-secrets
+  "Creates an lazy seq containing maps specifying GoCD lookup keys and their associated value. Structured:
+   ({:key <GoCD lookup key>
+     :value <Associated value>}
+     ...)
+
+  Params:
+  - `client`: The vault.client you want to use to access Vault
+  - `gocd-lookup-keys`: A seq of strings, (<PATH>#<KEY> ...), where <PATH> corresponds to a Vault Path, and <KEY>
+  a key found at that path."
+  [client gocd-lookup-keys]
+  (let [paths-to-vals
+        (lookup-paths client (map #(first (str/split % #"#")) gocd-lookup-keys))]
+    (map
+      (fn [gocd-lookup-key]
+        (let [[path key] (mapv keyword (str/split gocd-lookup-key #"#"))]
+          {:key gocd-lookup-key
+           :value (-> paths-to-vals path key)}))
+      gocd-lookup-keys)))
+
 
 ;; This message is a request to the plugin to look up for secrets for a given
 ;; list of keys. In addition to the list of keys in the JSON request, the
@@ -206,11 +240,7 @@
 (defmethod handle-request "go.cd.secrets.secrets-lookup"
   [client _ data]
   (try
-    (let [secret-keys (:keys data)
-          secrets (map (fn [key]
-                         {:key key
-                          :value (vault/read-secret @client key {:not-found nil})})
-                       secret-keys)
+    (let [secrets (lookup-secrets @client (:keys data))
           missing-keys (mapv :key (remove :value secrets))]
       (if (empty? missing-keys)
         {:response-code    200
