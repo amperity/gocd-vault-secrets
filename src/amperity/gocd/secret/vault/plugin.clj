@@ -205,10 +205,10 @@
   - `client`: The vault.client you want to use to access Vault
   - `paths`: A seq containing all paths you wish to look up (as strings or keywords), duplicates are fine."
   [client paths]
-  (letfn [;; Makes a vector containing the path and that paths data
-          (lookup-path [path]
-            [(keyword path)
-             (vault/read-secret client path {:not-found nil})])]
+  (letfn [;; Makes a vector containing the path and the data associated with that path in vault, or nil if none is found
+          (lookup-path
+            [path]
+            [(keyword path) (vault/read-secret client path {:not-found nil})])]
     (into {} (map lookup-path (into #{} paths)))))
 
 
