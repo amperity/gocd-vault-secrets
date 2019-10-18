@@ -16,3 +16,7 @@ services:
     volumes:
       - ./home:/home/go:rw
       - ./agent:/godata:rw
+    ports:
+      - "8152:8152"
+    environment:
+      GO_SERVER_URL: http://server:8153/go

@@ -166,7 +166,7 @@
 
 ;; This call is expected to validate the user inputs that form a part of
 ;; the secret backend configuration.
-(defmethod handle-request "go.cd.secrets.validate"
+(defmethod handle-request "go.cd.secrets.secrets-config.validate"
   [client _ data]
   (let [input-error (fn [field-key]
                       (when-let [error-message (input-error-message field-key (field-key data))]
@@ -207,15 +207,15 @@
   [client _ data]
   (try
     (let [secret-keys (:keys data)
-          secrets (mapv (fn [key]
-                          {:key key
-                           :value (vault/read-secret @client key {:not-found nil})})
-                        secret-keys)
+          secrets (map (fn [key]
+                         {:key key
+                          :value (vault/read-secret @client key {:not-found nil})})
+                       secret-keys)
           missing-keys (mapv :key (remove :value secrets))]
       (if (empty? missing-keys)
         {:response-code    200
          :response-headers {}
-         :response-body    secrets}
+         :response-body    (mapv #(update % :value str) secrets)}
         {:response-code    404
          :response-headers {}
          :response-body    {:message (str "Unable to resolve key(s) " missing-keys)}}))
