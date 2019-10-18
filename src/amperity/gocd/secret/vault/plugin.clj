@@ -208,9 +208,9 @@
   (try
     (let [secret-keys (:keys data)
           secrets (map (fn [key]
-                          {:key key
-                           :value (vault/read-secret @client key {:not-found nil})})
-                        secret-keys)
+                         {:key key
+                          :value (vault/read-secret @client key {:not-found nil})})
+                       secret-keys)
           missing-keys (mapv :key (remove :value secrets))]
       (if (empty? missing-keys)
         {:response-code    200
