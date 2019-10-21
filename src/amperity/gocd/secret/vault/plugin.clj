@@ -198,20 +198,6 @@
 
 
 ;; ## Secret Usage
-(defn- lookup-paths
-  "Creates a map from Vault paths (as keywords) to their corresponding secret data (defaults to nil)
-
-  Params:
-  - `client`: The vault.client you want to use to access Vault
-  - `paths`: A seq containing all paths you wish to look up (as strings or keywords), duplicates are fine."
-  [client paths]
-  (letfn [;; Makes a vector containing the path and the data associated with that path in vault, or nil if none is found
-          (lookup-path
-            [path]
-            [(keyword path) (vault/read-secret client path {:not-found nil})])]
-    (into {} (map lookup-path (into #{} paths)))))
-
-
 (defn- lookup-secrets
   "Creates an lazy seq containing maps specifying GoCD lookup keys and their associated value. Structured:
    ({:key <GoCD lookup key>
@@ -223,15 +209,18 @@
   - `gocd-lookup-keys`: A seq of strings, (<PATH>#<KEY> ...), where <PATH> corresponds to a Vault Path, and <KEY>
   a key found at that path."
   [client gocd-lookup-keys]
-  (let [paths-to-vals
-        (lookup-paths client (map #(first (str/split % #"#")) gocd-lookup-keys))]
+  (let [;; A map from Vault paths (as keywords) to their corresponding secret data (defaults to nil)
+        paths-to-vals
+        (->> gocd-lookup-keys
+             (map #(first (str/split % #"#")))
+             (into #{})
+             (map (fn [path] [(keyword path) (vault/read-secret client path {:not-found nil})]))
+             (into {}))]
     (map
       (fn [gocd-lookup-key]
-        (let [[path key] (mapv keyword (str/split gocd-lookup-key #"#"))]
-          {:key gocd-lookup-key
-           :value (-> paths-to-vals path key)}))
+        {:key   gocd-lookup-key
+         :value (get-in paths-to-vals (map keyword (str/split gocd-lookup-key #"#")))})
       gocd-lookup-keys)))
-
 
 ;; This message is a request to the plugin to look up for secrets for a given
 ;; list of keys. In addition to the list of keys in the JSON request, the
