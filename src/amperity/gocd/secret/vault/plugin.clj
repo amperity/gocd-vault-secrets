@@ -48,10 +48,15 @@
    :auth_method {:metadata     {:required true :secure false}
                  :label        "Authentication Method"
                  :validate-fns []}
+   ;; Token Auth
    :vault_token {:metadata     {:required false :secure true}
                  :label        "Vault Token"
                  :validate-fns [#(when-not (string? %)
-                                   "Vault Token must be a string")]}})
+                                   "Vault Token must be a string")]}
+   ;; AWS Auth
+   :iam_role {:metadata {:required false :secure false}
+              :label "IAM Role"
+              :validate-fns []}})
 
 
 ;; ## Request Handling
@@ -156,9 +161,12 @@
   - `client` The Vault Client you wish to authenticate
   - `inputs` A map containing the user inputted settings for the plugin"
   [client inputs]
-  (case (keyword (:auth_method inputs))
+  (case (keyword (str/join "-" (str/split (str/lower-case (:auth_method inputs)) #" ")))
     :token
     (vault/authenticate! client :token (:vault_token inputs))
+
+    :aws-iam
+    (vault/authenticate! client :aws-iam {})
 
     (throw (ex-info "Unhandled vault auth type"
                     {:user-input (keyword (:auth_method inputs))}))))
