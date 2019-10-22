@@ -1,7 +1,6 @@
 (ns amperity.gocd.secret.vault.plugin-test
   (:require
     [amperity.gocd.secret.vault.plugin :as plugin]
-    [amperity.gocd.secret.vault.util :as u]
     [clojure.test :refer [testing deftest is]]
     [vault.client.mock]
     [vault.core :as vault])
@@ -182,28 +181,28 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input :fake-id-mclo
 
 
 (deftest secrets-lookup
-  (testing "Can look up secrets stored in vault given a well formed request"
+  (testing "Can look up individual keys stored in vault given a well formed request"
     (let [result (plugin/handle-request
                    (mock-client-atom)
                    "go.cd.secrets.secrets-lookup"
                    {:configuration {}
                     ;; The keys will likely be string in the http vault client instance,
                     ;; but this is easier for testing.
-                    :keys          [:batman :hulk :wonder-woman]})
+                    :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
           body (:response-body result)
           status (:response-code result)]
-      (is (= [{:key :batman :value "Bruce Wayne"}
-              {:key :hulk :value "Bruce Banner"}
-              {:key :wonder-woman :value "Diana Prince"}]
+      (is (= [{:key "identities#batman" :value "Bruce Wayne"}
+              {:key "identities#hulk" :value "Bruce Banner"}
+              {:key "identities#wonder-woman" :value "Diana Prince"}]
              body))
       (is (= 200 status))))
   (testing "Fails cleanly when looking up secrets that don't exist"
     (let [result (plugin/handle-request (mock-client-atom) "go.cd.secrets.secrets-lookup"
                                         {:configuration {}
-                                         :keys          [:dr-who :jack-the-ripper]})
+                                         :keys          ["identities#dr-who" "identities#jack-the-ripper"]})
           body (:response-body result)
           status (:response-code result)]
-      (is (= {:message "Unable to resolve key(s) [:dr-who :jack-the-ripper]"}
+      (is (= {:message "Unable to resolve key(s) [\"identities#dr-who\" \"identities#jack-the-ripper\"]"}
              body))
       (is (= 404 status))))
   (testing "Fails cleanly when other lookup error occurs"
@@ -213,7 +212,7 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input :fake-id-mclo
                    (atom mock-client-that-errors)
                    "go.cd.secrets.secrets-lookup"
                    {:configuration {}
-                    :keys          [:batman]})
+                    :keys          ["identities#batman"]})
           body (:response-body result)
           status (:response-code result)]
       (is (= {:message "Error occurred during lookup:\nclojure.lang.ExceptionInfo: Mock Exception {}"} body))
