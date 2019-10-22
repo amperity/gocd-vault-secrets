@@ -1,7 +1,7 @@
 version: "3"
 services:
   server:
-    image: gocd/gocd-server:v19.7.0
+    image: gocd/gocd-server:v19.9.0
     restart: on-failure
     volumes:
       - ./home:/home/go:rw
@@ -11,7 +11,7 @@ services:
       - "8154:8154"
 
   agent:
-    image: gocd/gocd-agent-ubuntu-16.04:v19.7.0
+    image: gocd/gocd-agent-ubuntu-16.04:v19.9.0
     restart: on-failure
     volumes:
       - ./home:/home/go:rw
