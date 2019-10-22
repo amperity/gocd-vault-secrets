@@ -2,7 +2,6 @@
   "Plugin utilities."
   (:require
     [clojure.java.io :as io]
-    [clojure.string :as str]
     [clojure.walk :as walk]
     [clojure.xml :as xml])
   (:import

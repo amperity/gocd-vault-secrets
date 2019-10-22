@@ -9,18 +9,12 @@
     [vault.core :as vault])
   (:import
     clojure.lang.ExceptionInfo
-    (com.thoughtworks.go.plugin.api
-      GoApplicationAccessor
-      GoPluginIdentifier)
     (com.thoughtworks.go.plugin.api.exceptions
       UnhandledRequestTypeException)
     (com.thoughtworks.go.plugin.api.request
-      DefaultGoApiRequest
       GoPluginApiRequest)
     (com.thoughtworks.go.plugin.api.response
-      DefaultGoPluginApiResponse
-      GoPluginApiResponse)
-    java.time.Instant))
+      DefaultGoPluginApiResponse)))
 
 
 ;; ## Plugin Initialization
