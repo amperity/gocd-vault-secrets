@@ -91,7 +91,7 @@
     (testing "Validate correctly handles case with no errors (no false positives)"
       (let [result (plugin/handle-request
                      (mock-client-atom) "go.cd.secrets.secrets-config.validate"
-                     {:vault_addr "https://amperity.com"
+                     {:vault_addr  "https://amperity.com"
                       :auth_method "Token"
                       :vault_token "abc123"})
             body (:response-body result)
@@ -101,12 +101,12 @@
     (testing "Validate correctly handles case with AWS IAM validation with no errors (no false positives)"
       (let [result (plugin/handle-request
                      (mock-client-atom) "go.cd.secrets.secrets-config.validate"
-                     {:vault_addr "https://amperity.com"
+                     {:vault_addr  "https://amperity.com"
                       :auth_method "aws-iam"
                       :credentials (aws/derive-credentials "fake-id" "fake-secret" "fake-token")})
             status (:response-code result)]
-          ;; TODO: Figure out how to mock Vault client to actually get authentication to "pass"
-            (is (= 200 status))))
+        ;; TODO: Figure out how to mock Vault client to actually get authentication to "pass"
+        (is (= 200 status))))
     (testing "Validate correctly handles case with errors (no false negatives, no false positives)"
       (let [result (plugin/handle-request
                      (mock-client-atom) "go.cd.secrets.secrets-config.validate"
