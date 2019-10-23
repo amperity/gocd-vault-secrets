@@ -106,7 +106,7 @@
                       :credentials (aws/derive-credentials "fake-id" "fake-secret" "fake-token")})
             status (:response-code result)]
           ;; TODO: Figure out how to mock Vault client to actually get authentication to "pass"
-          (is (= 200 status))))
+            (is (= 200 status))))
     (testing "Validate correctly handles case with errors (no false negatives, no false positives)"
       (let [result (plugin/handle-request
                      (mock-client-atom) "go.cd.secrets.secrets-config.validate"
