@@ -157,13 +157,16 @@
   [client inputs]
   (case (keyword (str/join "-" (str/split (str/lower-case (:auth_method inputs)) #" ")))
     :token
-    (vault/authenticate! client :token (:vault_token inputs))
+    (vault/authenticate! client :token
+                         (:vault_token inputs))
 
     :aws-iam
-    (vault/authenticate! client :aws-iam {})
+    (do (require 'vault.client.ext.aws)
+        (vault/authenticate! client :aws-iam
+                             {:iam-role (:iam_role inputs) :credentials (:aws_credentials inputs)}))
 
     (throw (ex-info "Unhandled vault auth type"
-                    {:user-input (keyword (:auth_method inputs))}))))
+                    {:user-input (:auth_method inputs)}))))
 
 
 ;; This call is expected to validate the user inputs that form a part of

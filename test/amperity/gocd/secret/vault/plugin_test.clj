@@ -2,6 +2,7 @@
   (:require
     [amperity.gocd.secret.vault.plugin :as plugin]
     [clojure.test :refer [testing deftest is]]
+    [vault.client.ext.aws :as aws]
     [vault.client.mock]
     [vault.core :as vault])
   (:import
@@ -91,12 +92,21 @@
       (let [result (plugin/handle-request
                      (mock-client-atom) "go.cd.secrets.secrets-config.validate"
                      {:vault_addr "https://amperity.com"
-                      :auth_method "token"
+                      :auth_method "Token"
                       :vault_token "abc123"})
             body (:response-body result)
             status (:response-code result)]
         (is (= [] body))
         (is (= 200 status))))
+    (testing "Validate correctly handles case with AWS IAM validation with no errors (no false positives)"
+      (let [result (plugin/handle-request
+                     (mock-client-atom) "go.cd.secrets.secrets-config.validate"
+                     {:vault_addr "https://amperity.com"
+                      :auth_method "aws-iam"
+                      :credentials (aws/derive-credentials "fake-id" "fake-secret" "fake-token")})
+            status (:response-code result)]
+          ;; TODO: Figure out how to mock Vault client to actually get authentication to "pass"
+          (is (= 200 status))))
     (testing "Validate correctly handles case with errors (no false negatives, no false positives)"
       (let [result (plugin/handle-request
                      (mock-client-atom) "go.cd.secrets.secrets-config.validate"
@@ -164,7 +174,7 @@ java.lang.IllegalArgumentException: Token credential must be a string"}]
       (is (= 200 status))
       (is (= [{:key     :auth_method
                :message "Unable to authenticate Vault client:
-clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input :fake-id-mclovin}"}]
+clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input \"fake-id-mclovin\"}"}]
              body))
       (is (some? @fake-client)))))
 
