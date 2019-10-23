@@ -7,6 +7,8 @@ log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## Unreleased
 
+- Added AWS Auth method
+
 ## [0.1.0] - 2019-10-22
 - Initial plugin release
 - Supports one Auth Method, direct Vault tokens
