@@ -106,8 +106,7 @@
                      {:vault_addr      "https://amperity.com"
                       :auth_method     "aws-iam"
                       :iam_role        "role"
-                      :aws_credentials (aws/derive-credentials "hello" "goodbye" "7")
-                      })
+                      :aws_credentials (aws/derive-credentials "hello" "goodbye" "7")})
             body (:response-body result)
             status (:response-code result)]
         (is (= [] body))

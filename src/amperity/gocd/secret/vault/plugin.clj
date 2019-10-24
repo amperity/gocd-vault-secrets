@@ -10,7 +10,8 @@
     [vault.core :as vault])
   (:import
     clojure.lang.ExceptionInfo
-    (com.amazonaws.auth AWSCredentials)
+    (com.amazonaws.auth
+      AWSCredentials)
     (com.thoughtworks.go.plugin.api.exceptions
       UnhandledRequestTypeException)
     (com.thoughtworks.go.plugin.api.request
