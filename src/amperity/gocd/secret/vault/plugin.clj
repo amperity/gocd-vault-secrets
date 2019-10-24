@@ -5,10 +5,12 @@
     [amperity.gocd.secret.vault.util :as u]
     [clojure.java.io :as io]
     [clojure.string :as str]
+    [vault.client.ext.aws]
     [vault.client.http]
     [vault.core :as vault])
   (:import
     clojure.lang.ExceptionInfo
+    (com.amazonaws.auth AWSCredentials)
     (com.thoughtworks.go.plugin.api.exceptions
       UnhandledRequestTypeException)
     (com.thoughtworks.go.plugin.api.request
@@ -155,15 +157,15 @@
   - `client` The Vault Client you wish to authenticate
   - `inputs` A map containing the user inputted settings for the plugin"
   [client inputs]
-  (case (keyword (str/join "-" (str/split (str/lower-case (:auth_method inputs)) #" ")))
-    :token
+  (case (:auth_method inputs)
+    "token"
     (vault/authenticate! client :token
                          (:vault_token inputs))
 
-    :aws-iam
-    (do (require 'vault.client.ext.aws)
-        (vault/authenticate! client :aws-iam
-                             {:iam-role (:iam_role inputs) :credentials (:aws_credentials inputs)}))
+    "aws-iam"
+    (vault/authenticate! client :aws-iam
+                         {:iam-role    (:iam_role inputs)
+                          :credentials ^AWSCredentials (:aws_credentials inputs)})
 
     (throw (ex-info "Unhandled vault auth type"
                     {:user-input (:auth_method inputs)}))))
