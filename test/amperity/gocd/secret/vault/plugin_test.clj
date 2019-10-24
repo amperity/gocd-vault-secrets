@@ -2,6 +2,7 @@
   (:require
     [amperity.gocd.secret.vault.plugin :as plugin]
     [clojure.test :refer [testing deftest is]]
+    [vault.client.ext.aws :as aws]
     [vault.client.mock]
     [vault.core :as vault])
   (:import
@@ -86,60 +87,73 @@
 
 
 (deftest validate
-  (with-redefs [vault/authenticate! (fn [_ _ _] true)]
-    (testing "Validate correctly handles case with no errors (no false positives)"
+  (testing "Validate correctly handles case with no errors (no false positives)"
+    (let [result (plugin/handle-request
+                   (mock-client-atom) "go.cd.secrets.secrets-config.validate"
+                   {:vault_addr  "https://amperity.com"
+                    :auth_method "token"
+                    :vault_token "abc123"})
+          body (:response-body result)
+          status (:response-code result)]
+      (is (= [] body))
+      (is (= 200 status))))
+  (testing "Validate correctly handles case with AWS IAM validation with no errors (no false positives)"
+    (with-redefs [vault.client.http/do-api-request (fn [_ _ _] true)
+                  vault.client.http/api-auth! (fn [_ _ _] true)]
       (let [result (plugin/handle-request
-                     (mock-client-atom) "go.cd.secrets.secrets-config.validate"
-                     {:vault_addr "https://amperity.com"
-                      :auth_method "token"
-                      :vault_token "abc123"})
+                     (mock-client-atom)
+                     "go.cd.secrets.secrets-config.validate"
+                     {:vault_addr      "https://amperity.com"
+                      :auth_method     "aws-iam"
+                      :iam_role        "role"
+                      :aws_credentials (aws/derive-credentials "hello" "goodbye" "7")})
             body (:response-body result)
             status (:response-code result)]
         (is (= [] body))
-        (is (= 200 status))))
-    (testing "Validate correctly handles case with errors (no false negatives, no false positives)"
-      (let [result (plugin/handle-request
-                     (mock-client-atom) "go.cd.secrets.secrets-config.validate"
-                     {:vault_addr "protocol://amperity.com"})
-            body (:response-body result)
-            status (:response-code result)]
-        (is (= [{:key     :vault_addr
-                 :message "Vault URL must start with http:// or https://"}
-                {:key     :auth_method
-                 :message "Authentication Method is required"}]
-               body))
-        (is (= 200 status))))
-    (testing "Validate also resets the vault client if a new URL is specified, when input is valid only"
-      (with-redefs [plugin/authenticate-client-from-inputs!
-                    (fn [_ inputs]
-                      (is (= {:auth_method "token"
-                              :vault_addr  "https://amperity.com"}
-                             inputs)))]
-        (let [fake-client (atom nil)
-              result (plugin/handle-request
-                       fake-client "go.cd.secrets.secrets-config.validate"
-                       {:vault_addr  "https://amperity.com"
-                        :auth_method "token"})
-              body (:response-body result)
-              status (:response-code result)]
-          (is (= 200 status))
-          (is (= [] body))
-          (is (some? @fake-client)))
-        (let [fake-client (atom nil)
-              result (plugin/handle-request
-                       fake-client "go.cd.secrets.secrets-config.validate"
-                       {:vault_addr "https://amperity.com"})
-              status (:response-code result)]
-          (is (= 200 status))
-          (is (nil? @fake-client)))))
-    (testing "Validate a does not reset the vault client if no new URL is specified "
+        (is (= 200 status)))))
+  (testing "Validate correctly handles case with errors (no false negatives, no false positives)"
+    (let [result (plugin/handle-request
+                   (mock-client-atom) "go.cd.secrets.secrets-config.validate"
+                   {:vault_addr "protocol://amperity.com"})
+          body (:response-body result)
+          status (:response-code result)]
+      (is (= [{:key     :vault_addr
+               :message "Vault URL must start with http:// or https://"}
+              {:key     :auth_method
+               :message "Authentication Method is required"}]
+             body))
+      (is (= 200 status))))
+  (testing "Validate also resets the vault client if a new URL is specified, when input is valid only"
+    (with-redefs [plugin/authenticate-client-from-inputs!
+                  (fn [_ inputs]
+                    (is (= {:auth_method "token"
+                            :vault_addr  "https://amperity.com"}
+                           inputs)))]
       (let [fake-client (atom nil)
             result (plugin/handle-request
                      fake-client "go.cd.secrets.secrets-config.validate"
-                     {})
+                     {:vault_addr  "https://amperity.com"
+                      :auth_method "token"})
+            body (:response-body result)
+            status (:response-code result)]
+        (is (= 200 status))
+        (is (= [] body))
+        (is (some? @fake-client)))
+      (let [fake-client (atom nil)
+            result (plugin/handle-request
+                     fake-client "go.cd.secrets.secrets-config.validate"
+                     {:vault_addr "https://amperity.com"})
             status (:response-code result)]
         (is (= 200 status))
         (is (nil? @fake-client)))))
+  (testing "Validate a does not reset the vault client if no new URL is specified "
+    (let [fake-client (atom nil)
+          result (plugin/handle-request
+                   fake-client "go.cd.secrets.secrets-config.validate"
+                   {})
+          status (:response-code result)]
+      (is (= 200 status))
+      (is (nil? @fake-client))))
   (testing "Validate also returns client authentication errors"
     (let [fake-client (atom nil)
           result (plugin/handle-request
@@ -164,7 +178,7 @@ java.lang.IllegalArgumentException: Token credential must be a string"}]
       (is (= 200 status))
       (is (= [{:key     :auth_method
                :message "Unable to authenticate Vault client:
-clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input :fake-id-mclovin}"}]
+clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input \"fake-id-mclovin\"}"}]
              body))
       (is (some? @fake-client)))))
 
