@@ -124,16 +124,16 @@
              body))
       (is (= 200 status))))
   (testing "Validate also resets the vault client if a new URL is specified, when input is valid only"
-    (with-redefs [plugin/authenticate-client-from-inputs!
-                  (fn [_ inputs]
-                    (is (= {:auth_method "token"
-                            :vault_addr  "https://amperity.com"}
-                           inputs)))]
+    (with-redefs [vault.core/new-client
+                  (fn [_]
+                    (reify vault.core/Client
+                      (authenticate! [_ _ _] true)))]
       (let [fake-client (atom nil)
             result (plugin/handle-request
                      fake-client "go.cd.secrets.secrets-config.validate"
                      {:vault_addr  "https://amperity.com"
-                      :auth_method "token"})
+                      :auth_method "token"
+                      :token "defined token"})
             body (:response-body result)
             status (:response-code result)]
         (is (= 200 status))
@@ -195,6 +195,42 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input \"fake-id-mcl
 
 
 (deftest secrets-lookup
+  (testing "If client is not defined, it gets defined and results are returned as expected"
+    (with-redefs [plugin/authenticate-client-from-inputs!
+                  (fn [client _]
+                    (reset! client @(mock-client-atom)))]
+      (let [client (atom nil)
+            result (plugin/handle-request
+                     client
+                     "go.cd.secrets.secrets-lookup"
+                     {:configuration {}
+                      ;; The keys will likely be string in the http vault client instance,
+                      ;; but this is easier for testing.
+                      :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
+            body (:response-body result)
+            status (:response-code result)]
+        (is (= [{:key "identities#batman" :value "Bruce Wayne"}
+                {:key "identities#hulk" :value "Bruce Banner"}
+                {:key "identities#wonder-woman" :value "Diana Prince"}]
+               body))
+        (is (= 200 status))
+        (is (some? @client)))))
+  (testing "If client is not defined and authentication fails, lookup fails cleanly"
+    (let [client (atom nil)
+          result (plugin/handle-request
+                   client
+                   "go.cd.secrets.secrets-lookup"
+                   {:configuration {}
+                    ;; The keys will likely be string in the http vault client instance,
+                    ;; but this is easier for testing.
+                    :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
+          body (:response-body result)
+          status (:response-code result)]
+      (is (= {:message "Error occurred during lookup:
+clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input nil}"}
+             body))
+      (is (= 500 status))
+      (is (nil? @client))))
   (testing "Can look up individual keys stored in vault given a well formed request"
     (let [result (plugin/handle-request
                    (mock-client-atom)
