@@ -216,21 +216,21 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input \"fake-id-mcl
         (is (= 200 status))
         (is (some? @client)))))
   (testing "If client is not defined and authentication fails, lookup fails cleanly"
-      (let [client (atom nil)
-            result (plugin/handle-request
-                     client
-                     "go.cd.secrets.secrets-lookup"
-                     {:configuration {}
-                      ;; The keys will likely be string in the http vault client instance,
-                      ;; but this is easier for testing.
-                      :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
-            body (:response-body result)
-            status (:response-code result)]
-        (is (= {:message "Error occurred during lookup:
+    (let [client (atom nil)
+          result (plugin/handle-request
+                   client
+                   "go.cd.secrets.secrets-lookup"
+                   {:configuration {}
+                    ;; The keys will likely be string in the http vault client instance,
+                    ;; but this is easier for testing.
+                    :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
+          body (:response-body result)
+          status (:response-code result)]
+      (is (= {:message "Error occurred during lookup:
 clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input nil}"}
-               body))
-        (is (= 500 status))
-        (is (nil? @client))))
+             body))
+      (is (= 500 status))
+      (is (nil? @client))))
   (testing "Can look up individual keys stored in vault given a well formed request"
     (let [result (plugin/handle-request
                    (mock-client-atom)
