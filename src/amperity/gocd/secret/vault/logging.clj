@@ -17,7 +17,7 @@
 (defmacro ^:private deflevel
   "Define logging functions for the given level."
   [level]
-  ^:cljfmt/ignore
+  ^:cljstyle/ignore
   `(do
      (defn ~level
        [message# & args#]
