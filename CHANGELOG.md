@@ -8,6 +8,7 @@ log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 ## Unreleased
 
 - Added AWS Auth method
+- Fixed bug where secret lookup would fail after server restart
 
 ## [0.1.0] - 2019-10-22
 - Initial plugin release
