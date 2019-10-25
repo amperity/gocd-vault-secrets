@@ -72,6 +72,7 @@
   - `data`: map, the body of the message passed from the GoCD server"
   (fn dispatch
     [client req-name data]
+    ;(log/logger "info" (str "Vault plugin received: " req-name) nil)  ;; Most useful log statement for debugging
     req-name))
 
 
@@ -155,16 +156,18 @@
   "Authenticates the Vault Client.
 
   Params:
-  - `client` The Vault Client you wish to authenticate
+  - `client` An atom containing the Vault Client you wish to authenticate, may contain nil if you want a new client.
   - `inputs` A map containing the user inputted settings for the plugin"
   [client inputs]
+  (when-not (= (:api-url @client) (:vault_addr inputs))
+    (reset! client (vault/new-client (:vault_addr inputs))))
   (case (:auth_method inputs)
     "token"
-    (vault/authenticate! client :token
+    (vault/authenticate! @client :token
                          (:vault_token inputs))
 
     "aws-iam"
-    (vault/authenticate! client :aws-iam
+    (vault/authenticate! @client :aws-iam
                          {:iam-role    (:iam_role inputs)
                           :credentials ^AWSCredentials (:aws_credentials inputs)})
 
@@ -188,9 +191,7 @@
                        (= (:client-token @client) (:vault_token data)))))
       ;; Authenticate Vault client
       (try
-        (when (not (= (:api-url @client) (:vault_addr data)))
-          (reset! client (vault/new-client (:vault_addr data))))
-        (authenticate-client-from-inputs! @client data)
+        (authenticate-client-from-inputs! client data)
         {:response-code 200
          :response-headers {}
          :response-body []}
@@ -213,7 +214,7 @@
      ...)
 
   Params:
-  - `client`: The vault.client you want to use to access Vault
+  - `client`: The vault.client (*not* as an Atom) you want to use to access Vault
   - `gocd-lookup-keys`: A seq of strings, (<PATH>#<KEY> ...), where <PATH> corresponds to a Vault Path, and <KEY>
   a key found at that path."
   [client gocd-lookup-keys]
@@ -237,6 +238,8 @@
 (defmethod handle-request "go.cd.secrets.secrets-lookup"
   [client _ data]
   (try
+    (when-not @client
+      (authenticate-client-from-inputs! client (:configurations data)))
     (let [secrets (lookup-secrets @client (:keys data))
           missing-keys (mapv :key (remove :value secrets))]
       (if (empty? missing-keys)
