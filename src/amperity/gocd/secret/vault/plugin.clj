@@ -239,7 +239,7 @@
   [client _ data]
   (try
     (when-not @client
-      (authenticate-client-from-inputs! client (:configurations data)))
+      (authenticate-client-from-inputs! client (:configuration data)))
     (let [secrets (lookup-secrets @client (:keys data))
           missing-keys (mapv :key (remove :value secrets))]
       (if (empty? missing-keys)
