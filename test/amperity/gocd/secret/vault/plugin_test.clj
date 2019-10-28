@@ -1,6 +1,7 @@
 (ns amperity.gocd.secret.vault.plugin-test
   (:require
     [amperity.gocd.secret.vault.plugin :as plugin]
+    [amperity.gocd.secret.vault.logging :as log]
     [clojure.test :refer [testing deftest is]]
     [vault.client.ext.aws :as aws]
     [vault.client.mock]
@@ -62,7 +63,8 @@
           UnhandledRequestTypeException #"You have chose poorly"
           (plugin/handler (mock-client-atom) (default-go-plugin-api-request "You have chose poorly" nil)))))
   (testing "Handler when fails with some unknown error"
-    (with-redefs [plugin/handle-request (fn [_ _ _] (throw (ex-info "this is an error" {:data "stuff"})))]
+    (with-redefs [plugin/handle-request (fn [_ _ _] (throw (ex-info "this is an error" {})))
+                  log/errorx (fn [_ _ _ _] nil)]
       (is (response-equal (DefaultGoPluginApiResponse/error "this is an error")
                           (default-handler)))))
   (testing "Handler when handle-method returns a GoPluginApiResponse response"
@@ -89,6 +91,15 @@
       (is "image/svg+xml"
           (:content_type body))
       (is (some? (:data body)))
+      (is (= 200 status)))))
+
+
+(deftest get-view
+  (testing "Get view endpoint with well formed requests"
+    (let [result (plugin/handle-request (mock-client-atom) "go.cd.secrets.secrets-config.get-view" "")
+          body (:response-body result)
+          status (:response-code result)]
+      (is (some? (:template body)))
       (is (= 200 status)))))
 
 
