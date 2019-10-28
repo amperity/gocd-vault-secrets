@@ -61,7 +61,7 @@
   (testing "Handler when handle-method fails to route to an endpoint correctly"
     (is (thrown-with-msg?
           UnhandledRequestTypeException #"You have chose poorly"
-          (plugin/handler (mock-client-atom) (default-go-plugin-api-request "You have chose poorly" nil)))))
+          (plugin/handler (mock-client-atom) (default-go-plugin-api-request "You have chose poorly" {:totally "here"})))))
   (testing "Handler when fails with some unknown error"
     (with-redefs [plugin/handle-request (fn [_ _ _] (throw (ex-info "this is an error" {})))
                   log/errorx (fn [_ _ _ _] nil)]
@@ -81,6 +81,13 @@
       (with-redefs [plugin/handle-request (fn [_ _ _] response)]
         (is (response-equal (DefaultGoPluginApiResponse/success "{\"try\":\"this\"}")
                             (default-handler)))))))
+
+
+(deftest initialize!-test
+  (testing "initialize! returns an atom for the vault client"
+    (with-redefs [alter-var-root (fn [_ _] nil)]
+      (is (nil? @(plugin/initialize! nil nil))))))
+
 
 ;; Endpoint Tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (deftest get-icon
