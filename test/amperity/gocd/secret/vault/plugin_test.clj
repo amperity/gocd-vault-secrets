@@ -1,19 +1,19 @@
 (ns amperity.gocd.secret.vault.plugin-test
   (:require
-    [amperity.gocd.secret.vault.plugin :as plugin]
     [amperity.gocd.secret.vault.logging :as log]
+    [amperity.gocd.secret.vault.plugin :as plugin]
+    [amperity.gocd.secret.vault.util :as u]
     [clojure.test :refer [testing deftest is]]
     [vault.client.ext.aws :as aws]
     [vault.client.mock]
-    [vault.core :as vault]
-    [amperity.gocd.secret.vault.util :as u])
+    [vault.core :as vault])
   (:import
+    (com.thoughtworks.go.plugin.api.exceptions
+      UnhandledRequestTypeException)
     (com.thoughtworks.go.plugin.api.request
       DefaultGoPluginApiRequest)
     (com.thoughtworks.go.plugin.api.response
-      DefaultGoPluginApiResponse)
-    (com.thoughtworks.go.plugin.api.exceptions
-      UnhandledRequestTypeException)))
+      DefaultGoPluginApiResponse)))
 
 
 ;; Utils ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
