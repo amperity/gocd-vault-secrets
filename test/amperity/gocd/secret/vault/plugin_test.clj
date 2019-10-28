@@ -4,12 +4,15 @@
     [clojure.test :refer [testing deftest is]]
     [vault.client.ext.aws :as aws]
     [vault.client.mock]
-    [vault.core :as vault])
+    [vault.core :as vault]
+    [amperity.gocd.secret.vault.util :as u])
   (:import
     (com.thoughtworks.go.plugin.api.request
       DefaultGoPluginApiRequest)
     (com.thoughtworks.go.plugin.api.response
-      DefaultGoPluginApiResponse)))
+      DefaultGoPluginApiResponse)
+    (com.thoughtworks.go.plugin.api.exceptions
+      UnhandledRequestTypeException)))
 
 
 ;; Utils ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -44,6 +47,7 @@
   []
   (atom (vault/new-client "mock:amperity/gocd/secret/vault/secret-fixture.edn")))
 
+
 ;; Common Logic Tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Handler Tests
 (defn default-handler
@@ -52,22 +56,24 @@
   (plugin/handler (mock-client-atom) (default-go-plugin-api-request nil)))
 
 
-(deftest handler-with-nil-response
+(deftest handler-routing-fake-endpoint
+  (testing "Handler when handle-method fails to route to an endpoint correctly"
+    (is (thrown-with-msg?
+          UnhandledRequestTypeException #"You have chose poorly"
+          (plugin/handler (mock-client-atom) (default-go-plugin-api-request "You have chose poorly" nil)))))
+  (testing "Handler when fails with some unknown error"
+    (with-redefs [plugin/handle-request (fn [_ _ _] (throw (ex-info "this is an error" {:data "stuff"})))]
+      (is (response-equal (DefaultGoPluginApiResponse/error "this is an error")
+                          (default-handler)))))
   (testing "Handler when handle-method returns a GoPluginApiResponse response"
     (with-redefs [plugin/handle-request (fn [_ _ _] {:response-code 200 :response-body "" :response-headers {}})]
       (is (response-equal (DefaultGoPluginApiResponse/success "\"\"")
-                          (default-handler))))))
-
-
-(deftest handler-with-plugin-response
+                          (default-handler)))))
   (testing "Handler when handle-method returns a GoPluginApiResponse response"
     (with-redefs [plugin/handle-request
                   (fn [_ _ _] {:response-code 200 :response-body {:message "hello"} :response-headers {}})]
       (is (response-equal (DefaultGoPluginApiResponse/success "{\"message\":\"hello\"}")
-                          (default-handler))))))
-
-
-(deftest handler-with-json-response
+                          (default-handler)))))
   (testing "Handler when handle-method returns a json response"
     (let [response {:response-code 200 :response-headers {} :response-body {:try "this"}}]
       (with-redefs [plugin/handle-request (fn [_ _ _] response)]
@@ -226,7 +232,7 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input \"fake-id-mcl
                     :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
           body (:response-body result)
           status (:response-code result)]
-      (is (= {:message "Error occurred during lookup:
+      (is (= {:message "Error occurred during lookup of: [\"identities#batman\" \"identities#hulk\" \"identities#wonder-woman\"]
 clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input nil}"}
              body))
       (is (= 500 status))
@@ -265,5 +271,7 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input nil}"}
                     :keys          ["identities#batman"]})
           body (:response-body result)
           status (:response-code result)]
-      (is (= {:message "Error occurred during lookup:\nclojure.lang.ExceptionInfo: Mock Exception {}"} body))
+      (is (= {:message "Error occurred during lookup of: [\"identities#batman\"]
+clojure.lang.ExceptionInfo: Mock Exception {}"}
+             body))
       (is (= 500 status)))))
