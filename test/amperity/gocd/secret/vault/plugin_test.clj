@@ -1,11 +1,15 @@
 (ns amperity.gocd.secret.vault.plugin-test
   (:require
+    [amperity.gocd.secret.vault.logging :as log]
     [amperity.gocd.secret.vault.plugin :as plugin]
+    [amperity.gocd.secret.vault.util :as u]
     [clojure.test :refer [testing deftest is]]
     [vault.client.ext.aws :as aws]
     [vault.client.mock]
     [vault.core :as vault])
   (:import
+    (com.thoughtworks.go.plugin.api.exceptions
+      UnhandledRequestTypeException)
     (com.thoughtworks.go.plugin.api.request
       DefaultGoPluginApiRequest)
     (com.thoughtworks.go.plugin.api.response
@@ -44,6 +48,7 @@
   []
   (atom (vault/new-client "mock:amperity/gocd/secret/vault/secret-fixture.edn")))
 
+
 ;; Common Logic Tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Handler Tests
 (defn default-handler
@@ -52,27 +57,37 @@
   (plugin/handler (mock-client-atom) (default-go-plugin-api-request nil)))
 
 
-(deftest handler-with-nil-response
+(deftest handler-routing-fake-endpoint
+  (testing "Handler when handle-method fails to route to an endpoint correctly"
+    (is (thrown-with-msg?
+          UnhandledRequestTypeException #"You have chose poorly"
+          (plugin/handler (mock-client-atom) (default-go-plugin-api-request "You have chose poorly" {:totally "here"})))))
+  (testing "Handler when fails with some unknown error"
+    (with-redefs [plugin/handle-request (fn [_ _ _] (throw (ex-info "this is an error" {})))
+                  log/errorx (fn [_ _ _ _] nil)]
+      (is (response-equal (DefaultGoPluginApiResponse/error "this is an error")
+                          (default-handler)))))
   (testing "Handler when handle-method returns a GoPluginApiResponse response"
     (with-redefs [plugin/handle-request (fn [_ _ _] {:response-code 200 :response-body "" :response-headers {}})]
       (is (response-equal (DefaultGoPluginApiResponse/success "\"\"")
-                          (default-handler))))))
-
-
-(deftest handler-with-plugin-response
+                          (default-handler)))))
   (testing "Handler when handle-method returns a GoPluginApiResponse response"
     (with-redefs [plugin/handle-request
                   (fn [_ _ _] {:response-code 200 :response-body {:message "hello"} :response-headers {}})]
       (is (response-equal (DefaultGoPluginApiResponse/success "{\"message\":\"hello\"}")
-                          (default-handler))))))
-
-
-(deftest handler-with-json-response
+                          (default-handler)))))
   (testing "Handler when handle-method returns a json response"
     (let [response {:response-code 200 :response-headers {} :response-body {:try "this"}}]
       (with-redefs [plugin/handle-request (fn [_ _ _] response)]
         (is (response-equal (DefaultGoPluginApiResponse/success "{\"try\":\"this\"}")
                             (default-handler)))))))
+
+
+(deftest initialize!-test
+  (testing "initialize! returns an atom for the vault client"
+    (with-redefs [alter-var-root (fn [_ _] nil)]
+      (is (nil? @(plugin/initialize! nil nil))))))
+
 
 ;; Endpoint Tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (deftest get-icon
@@ -83,6 +98,15 @@
       (is "image/svg+xml"
           (:content_type body))
       (is (some? (:data body)))
+      (is (= 200 status)))))
+
+
+(deftest get-view
+  (testing "Get view endpoint with well formed requests"
+    (let [result (plugin/handle-request (mock-client-atom) "go.cd.secrets.secrets-config.get-view" "")
+          body (:response-body result)
+          status (:response-code result)]
+      (is (some? (:template body)))
       (is (= 200 status)))))
 
 
@@ -226,7 +250,7 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input \"fake-id-mcl
                     :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
           body (:response-body result)
           status (:response-code result)]
-      (is (= {:message "Error occurred during lookup:
+      (is (= {:message "Error occurred during lookup of: [\"identities#batman\" \"identities#hulk\" \"identities#wonder-woman\"]
 clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input nil}"}
              body))
       (is (= 500 status))
@@ -265,5 +289,7 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input nil}"}
                     :keys          ["identities#batman"]})
           body (:response-body result)
           status (:response-code result)]
-      (is (= {:message "Error occurred during lookup:\nclojure.lang.ExceptionInfo: Mock Exception {}"} body))
+      (is (= {:message "Error occurred during lookup of: [\"identities#batman\"]
+clojure.lang.ExceptionInfo: Mock Exception {}"}
+             body))
       (is (= 500 status)))))

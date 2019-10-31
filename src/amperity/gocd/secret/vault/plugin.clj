@@ -252,4 +252,4 @@
     (catch ExceptionInfo ex
       {:response-code    500
        :response-headers {}
-       :response-body    {:message (str "Error occurred during lookup:\n" ex)}})))
+       :response-body    {:message (str "Error occurred during lookup of: " (:keys data) "\n" ex)}})))
