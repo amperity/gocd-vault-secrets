@@ -26,8 +26,40 @@ appear in your server's `Admin - Plugins` page when it is back up.
 
 ## Configuration
 
-**TODO:** documentation
+1. Install the Vault Plugin on GoCD as specified in the **Installation** section of this README.
+2. Navigate to the Secret Management pane in GoCD.
+3. Add a new secret configuration, and fill out the details as desired.
+4. Set up the pipeline or environment you wish to use. You can specify secret params as described below.
 
+### Secret Params
+In GoCD, you can refer to secret params like this:
+```
+{{SECRET:[<SECRET CONFIG ID>][<SECRET KEY>]}}
+```
+
+If this does not look familiar to you, you may want to check out the [GoCD secret management docs](https://docs.gocd.org/current/configuration/secrets_management.html).
+
+Here's how to set up a secret param using the Vault plugin:
+
+##### KV API V1, Generic Secret Engine
+```
+{{SECRET:[<ID SPECIFIED IN PART 3>][<VAULT PATH>]}}
+```
+If you wish to access a specific key at that path, you can do so as follows:
+```
+{{SECRET:[<ID SPECIFIED IN PART 3>][<VAULT PATH>#<KEY>]}}
+```
+
+##### KV API V2, KV Secret Engine
+```
+{{SECRET:[<ID SPECIFIED IN PART 3>][<VAULT PATH>#data]}}
+```
+If you wish to access a specific key at that path, you can do so as follows:
+```
+{{SECRET:[<ID SPECIFIED IN PART 3>][<MOUNT>/data/<REST OF VAULT PATH>#data#<KEY>]}}
+```
+
+**NOTE:** this will become simpler once support is added to `vault-clj` for the `kv` secrets engine.
 
 ## Local Development
 
@@ -43,7 +75,7 @@ vault server -dev
 
 2. In a new terminal tab/window (so you can keep viewing the Vault logs), set up a `generic` secret store.
 Right now, `vault-clj` supports the `generic` secrets catalog, but not the newer `kv` catalog. Until that's updated,
-this plugin will only support `generic` secrets stores as well.
+this plugin will only support `generic` secrets stores as well (unless you use the workaround specified in the **Configuration** section.
 ```bash
 export VAULT_ADDR='http://127.0.0.1:8200'
 vault secrets enable --path=<PATH> generic
