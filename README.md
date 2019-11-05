@@ -49,6 +49,11 @@ If you wish to access a specific key at that path, you can do so as follows:
 ```
 {{SECRET:[<ID SPECIFIED IN PART 3>][<VAULT PATH>#<KEY>]}}
 ```
+This works with arbitrary levels of nested maps as well:
+```
+{{SECRET:[<ID SPECIFIED IN PART 3>][<VAULT PATH>#<KEY1>#<KEY2>#<KEY3>]}}
+```
+where `<VAULT PATH>#<KEY1>` returns a mapping with `KEY2` in it and so on.
 
 ##### KV API V2, KV Secret Engine
 ```
@@ -58,6 +63,12 @@ If you wish to access a specific key at that path, you can do so as follows:
 ```
 {{SECRET:[<ID SPECIFIED IN PART 3>][<MOUNT>/data/<REST OF VAULT PATH>#data#<KEY>]}}
 ```
+This works with arbitrary levels of nested maps as well:
+```
+{{SECRET:[<ID SPECIFIED IN PART 3>][<MOUNT>/data/<REST OF VAULT PATH>#data#<KEY1>#<KEY2>#<KEY3>]}}
+```
+where `<MOUNT>/data/<REST OF VAULT PATH>#data#<KEY1>` returns a mapping with `KEY2` in it and so on.
+
 
 **NOTE:** this will become simpler once support is added to `vault-clj` for the `kv` secrets engine.
 
