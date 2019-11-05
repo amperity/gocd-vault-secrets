@@ -74,8 +74,6 @@ vault server -dev
 ```
 
 2. In a new terminal tab/window (so you can keep viewing the Vault logs), set up a `generic` secret store.
-Right now, `vault-clj` supports the `generic` secrets catalog, but not the newer `kv` catalog. Until that's updated,
-this plugin will only support `generic` secrets stores as well (unless you use the workaround specified in the **Configuration** section.
 ```bash
 export VAULT_ADDR='http://127.0.0.1:8200'
 vault secrets enable --path=<PATH> generic
