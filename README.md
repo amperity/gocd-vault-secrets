@@ -88,7 +88,7 @@ Security Risks caused by Storing Secrets in the Pipelines directly:
 Assuming you're using Vault:
 - Secrets will almost definitely be needed outside of GoCD as well, making multiple different secret sources rely on manually being configured to be the same
 - Increased attack/leak area since secrets will be duplicated
-- Slower response after leaked credentials since pipelines its harder to roll secrets
+- Slower response after leaked credentials since pipelines it's harder to roll secrets
 - The whole point behind Vault is to be a central store for all your secrets, let it do what it does well
 
 If you're not using Vault:
