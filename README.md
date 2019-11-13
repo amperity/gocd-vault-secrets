@@ -57,7 +57,7 @@ where `<VAULT PATH>#<KEY1>` returns a mapping with `KEY2` in it and so on.
 
 ##### KV API V2, KV Secret Engine
 ```
-{{SECRET:[<ID SPECIFIED IN PART 3>][<VAULT PATH>#data]}}
+{{SECRET:[<ID SPECIFIED IN PART 3>][<MOUNT>/data/<REST OF VAULT PATH>#data]}}
 ```
 If you wish to access a specific key at that path, you can do so as follows:
 ```
@@ -69,13 +69,54 @@ This works with arbitrary levels of nested maps as well:
 ```
 where `<MOUNT>/data/<REST OF VAULT PATH>#data#<KEY1>` returns a mapping with `KEY2` in it and so on.
 
+## FAQ
 
-**NOTE:** this will become simpler once support is added to `vault-clj` for the `kv` secrets engine.
+##### Why not just store secrets in the pipelines directly?
+Operational Complexity caused by Storing Secrets in the Pipelines:
+- No coherent form of version management, you should be able to roll back secrets across all pipelines simultaneously and push updates to all pipelines simaultaneously
+- Duplicated secrets accross pipelines can cause a lot of problems with consistency. It's difficult to tell whether two secrets across pipelines are the same since they may have different hashes
+- Secrets will almost definitely be needed outside of GoCD as well, making multiple different secret sources rely on manually being configured to be the same
+- Secrets should be rotated frequently, which is a real pain
+- Difficult to tell what secrets are since they can only be decrypted by GoCD
+
+Security Risks caused by Storing Secrets in the Pipelines directly:
+- Not safe to store any credentials (even encrypted) in our SCM repos
+- Increased attack/leak area since secrets will be duplicated
+- Slower response after leaked credentials since it's harder to roll secrets
+
+##### Why not just ust the [GoCD file-based](https://github.com/gocd/gocd-file-based-secrets-plugin) secrets plugin?
+Assuming you're using Vault:
+- Secrets will almost definitely be needed outside of GoCD as well, making multiple different secret sources rely on manually being configured to be the same
+- Increased attack/leak area since secrets will be duplicated
+- Slower response after leaked credentials since pipelines it's harder to roll secrets
+- The whole point behind Vault is to be a central store for all your secrets, let it do what it does well
+
+If you're not using Vault:
+- You may have no other choice but to use the GoCD file-based secrets plugin
+- You should consider using some central store to manage your secrets
+
+##### When should I use this plugin or [the other GoCD Vault Secrets Plugin](https://github.com/gocd/gocd-vault-secret-plugin)?
+Benifits of this plugin (currently) not implemented in the other plugin:
+- Supports AWS IAM Authentication
+- Supports logical path secret lookup, thereby supporting every secrets engine
+- Supports nested data access within secrets
+- Open source so you can add new features easily
+- Requires little background knowledge to jump in and add features
+
+Benifits of the other plugin (currently) not implemented in this plugin:
+- Supports `approle` and `cert` authentication
+- Built specifically for `kvv2` secret engines, so accessing those secrets is simpler
+
+##### I have a new feature idea, what do I do now?
+Great! First step is you should open an issue on our repo. You should include whether you are creating the new feature yourself, or would like another dev to build it. Next, feel free to either fork the repo and build it yourself (see the local dev section below) or wait for another contributor to build it.
+
+##### I'm not positive how to use this plugin, who can I ask?
+If you don't understand the plugin, that is a bug in our documentation. Please open an issue and we'll update the docs as fast as we can!
 
 ## Local Development
 
 If you're planning to work on the plugin code locally, see the [`gocd`](gocd)
-directory for running a local GoCD server.
+directory for running a local GoCD server. The file you will almost definitely be contributing to is: [`src/amperity/gocd/secret/vault/plugin.clj`](./src/amperity/gocd/secret/vault/plugin.clj).
 
 ### Setting up a local Vault server
 
