@@ -292,12 +292,12 @@ clojure.lang.ExceptionInfo: Mock Exception {}"}
                    (mock-client-atom)
                    "go.cd.secrets.secrets-lookup"
                    {:configuration {}
-                      :keys          ["POLICIES:"]})
-            body (:response-body result)
-            status (:response-code result)]
-        (is (= "POLICIES:" (:key (first body))))
-        (is (= [] (-> (first body) :auth :policies)))
-        (is (= 200 status))))
+                    :keys          ["POLICIES:"]})
+          body (:response-body result)
+          status (:response-code result)]
+      (is (= "POLICIES:" (:key (first body))))
+      (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
+      (is (= 200 status))))
   (testing "Can lookup token when specified with policies"
     (let [result (plugin/handle-request
                    (mock-client-atom)
@@ -307,22 +307,22 @@ clojure.lang.ExceptionInfo: Mock Exception {}"}
           body (:response-body result)
           status (:response-code result)]
       (is (= "POLICIES:1,2,3" (:key (first body))))
-      (is (= ["1" "2" "3"] (-> (first body) :auth :policies)))
+      (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
+      (is (= 200 status))))
+  (testing "Can look up individual keys stored in vault given a well formed request"
+    (let [result (plugin/handle-request
+                   (mock-client-atom)
+                   "go.cd.secrets.secrets-lookup"
+                   {:configuration {}
+                    :keys          ["POLICIES:1,2" "POLICIES:" "identities#batman" "identities#hulk" "identities#wonder-woman"]})
+          body (:response-body result)
+          status (:response-code result)]
+      (is (= "POLICIES:1,2" (:key (first body))))
+      (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
+      (is (= "POLICIES:" (:key (second body))))
+      (is (and (string? (:value (second body))) (pos-int? (count (:value (second body))))))
+      (is (= [{:key "identities#batman" :value "Bruce Wayne"}
+              {:key "identities#hulk" :value "Bruce Banner"}
+              {:key "identities#wonder-woman" :value "Diana Prince"}]
+             (subvec body 2)))
       (is (= 200 status)))))
-(testing "Can look up individual keys stored in vault given a well formed request"
-  (let [result (plugin/handle-request
-                 (mock-client-atom)
-                 "go.cd.secrets.secrets-lookup"
-                 {:configuration {}
-                  :keys          ["POLICIES:1,2" "POLICIES:" "identities#batman" "identities#hulk" "identities#wonder-woman"]})
-        body (:response-body result)
-        status (:response-code result)]
-    (is (= "POLICIES:1,2" (:key (first body))))
-    (is (= ["1" "2"] (-> (first body) :auth :policies)))
-    (is (= "POLICIES:" (:key (second body))))
-    (is (= [] (-> (second body) :auth :policies)))
-    (is (= [{:key "identities#batman" :value "Bruce Wayne"}
-            {:key "identities#hulk" :value "Bruce Banner"}
-            {:key "identities#wonder-woman" :value "Diana Prince"}]
-           (subvec body 2)))
-    (is (= 200 status))))

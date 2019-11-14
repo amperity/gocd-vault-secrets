@@ -6,6 +6,7 @@ log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 
 ## Unreleased
+- Added Token Lookup option using POLICIES:<POLICY>,<POLICY>,...
 
 ## [0.2.0] - 2019-10-29
 

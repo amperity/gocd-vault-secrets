@@ -55,6 +55,8 @@
               :label "IAM Role"
               :validate-fns []}})
 
+;; Signifies a token creation instead of a secret lookup
+(def signify-token-creation-str "POLICIES:")
 
 ;; ## Request Handling
 
@@ -231,6 +233,28 @@
          :value (get-in paths-to-vals (map keyword (str/split gocd-lookup-key #"#")))})
       gocd-lookup-keys)))
 
+
+(defn- create-tokens!
+  "Creates an lazy seq containing maps specifying GoCD token-keys and their associated tokens. Structured:
+ ({:key <GoCD lookup key>
+   :value <Associated value>}
+   ...)
+
+  Params:
+  - `client`: The vault.client (*not* as an Atom) you want to use to access Vault
+  - `gocd-lookup-keys`: A seq of strings, (POLICIES:<POLICY>,<POLICY>,<POLICY> ...), where <POLICY> is a policy you
+  wish the generated token to have"
+  [client token-keys]
+  (map
+    (fn [token-key]
+      {:key token-key
+       :value (-> (vault/create-token!
+                    client
+                    {:policies (str/split (subs token-key (count signify-token-creation-str)) #",")})
+                  :auth
+                  :client-token)})
+    token-keys))
+
 ;; This message is a request to the plugin to look up for secrets for a given
 ;; list of keys. In addition to the list of keys in the JSON request, the
 ;; request body will also have the configuration required to connect and lookup
@@ -240,12 +264,14 @@
   (try
     (when-not @client
       (authenticate-client-from-inputs! client (:configuration data)))
-    (let [secrets (lookup-secrets @client (:keys data))
-          missing-keys (mapv :key (remove :value secrets))]
+    (let [{token-keys true secrets-keys false} (group-by #(str/starts-with?  % signify-token-creation-str) (:keys data))
+          secrets (lookup-secrets @client secrets-keys)
+          missing-keys (mapv :key (remove :value secrets))
+          all-lookups (concat (create-tokens! @client token-keys) secrets)]
       (if (empty? missing-keys)
         {:response-code    200
          :response-headers {}
-         :response-body    (mapv #(update % :value str) secrets)}
+         :response-body    (mapv #(update % :value str) all-lookups)}
         {:response-code    404
          :response-headers {}
          :response-body    {:message (str "Unable to resolve key(s) " missing-keys)}}))
