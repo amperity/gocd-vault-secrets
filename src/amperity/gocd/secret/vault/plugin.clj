@@ -248,11 +248,9 @@
   (map
     (fn [token-key]
       {:key token-key
-       :value (-> (vault/create-token!
-                    client
-                    {:policies (str/split (subs token-key (count signify-token-creation-str)) #",")})
-                  :auth
-                  :client-token)})
+       :value (:token (vault/create-token!
+                        client
+                        {:policies (str/split (subs token-key (count signify-token-creation-str)) #",")}))})
     token-keys))
 
 ;; This message is a request to the plugin to look up for secrets for a given
