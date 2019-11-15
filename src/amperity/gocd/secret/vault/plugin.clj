@@ -56,7 +56,7 @@
               :validate-fns []}})
 
 ;; Signifies a token creation instead of a secret lookup
-(def signify-token-creation-str "POLICIES:")
+(def signify-token-creation-str "TOKEN:")
 
 ;; ## Request Handling
 

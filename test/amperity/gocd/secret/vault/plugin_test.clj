@@ -292,10 +292,10 @@ clojure.lang.ExceptionInfo: Mock Exception {}"}
                    (mock-client-atom)
                    "go.cd.secrets.secrets-lookup"
                    {:configuration {}
-                    :keys          ["POLICIES:"]})
+                    :keys          ["TOKEN:"]})
           body (:response-body result)
           status (:response-code result)]
-      (is (= "POLICIES:" (:key (first body))))
+      (is (= "TOKEN:" (:key (first body))))
       (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
       (is (= 200 status))))
   (testing "Can lookup token when specified with policies"
@@ -303,10 +303,10 @@ clojure.lang.ExceptionInfo: Mock Exception {}"}
                    (mock-client-atom)
                    "go.cd.secrets.secrets-lookup"
                    {:configuration {}
-                    :keys          ["POLICIES:1,2,3"]})
+                    :keys          ["TOKEN:1,2,3"]})
           body (:response-body result)
           status (:response-code result)]
-      (is (= "POLICIES:1,2,3" (:key (first body))))
+      (is (= "TOKEN:1,2,3" (:key (first body))))
       (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
       (is (= 200 status))))
   (testing "Can look up individual keys stored in vault given a well formed request"
@@ -314,12 +314,12 @@ clojure.lang.ExceptionInfo: Mock Exception {}"}
                    (mock-client-atom)
                    "go.cd.secrets.secrets-lookup"
                    {:configuration {}
-                    :keys          ["POLICIES:1,2" "POLICIES:" "identities#batman" "identities#hulk" "identities#wonder-woman"]})
+                    :keys          ["TOKEN:1,2" "TOKEN:" "identities#batman" "identities#hulk" "identities#wonder-woman"]})
           body (:response-body result)
           status (:response-code result)]
-      (is (= "POLICIES:1,2" (:key (first body))))
+      (is (= "TOKEN:1,2" (:key (first body))))
       (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
-      (is (= "POLICIES:" (:key (second body))))
+      (is (= "TOKEN:" (:key (second body))))
       (is (and (string? (:value (second body))) (pos-int? (count (:value (second body))))))
       (is (= [{:key "identities#batman" :value "Bruce Wayne"}
               {:key "identities#hulk" :value "Bruce Banner"}
