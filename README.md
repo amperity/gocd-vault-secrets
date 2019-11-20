@@ -39,7 +39,16 @@ In GoCD, you can refer to secret params like this:
 
 If this does not look familiar to you, you may want to check out the [GoCD secret management docs](https://docs.gocd.org/current/configuration/secrets_management.html).
 
-Here's how to set up a secret param using the Vault plugin:
+Here's how to set up a secret param using the Vault plugin (please note that these are whitespace and case sensitive):
+
+##### Token Generation
+```
+{{SECRET:[<ID SPECIFIED IN PART 3>][TOKEN:]}}
+```
+If you want that token to inherit specific policies, you can specify them after `TOKEN:` and seperated by commas:
+```
+{{SECRET:[<ID SPECIFIED IN PART 3>][TOKEN:<POLICY1>,<POLICY2>,<POLICY3>]}}
+```
 
 ##### KV API V1, Generic Secret Engine
 ```

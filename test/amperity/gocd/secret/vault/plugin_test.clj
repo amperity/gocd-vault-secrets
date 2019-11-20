@@ -228,8 +228,6 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input \"fake-id-mcl
                      client
                      "go.cd.secrets.secrets-lookup"
                      {:configuration {}
-                      ;; The keys will likely be string in the http vault client instance,
-                      ;; but this is easier for testing.
                       :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
             body (:response-body result)
             status (:response-code result)]
@@ -245,8 +243,6 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input \"fake-id-mcl
                    client
                    "go.cd.secrets.secrets-lookup"
                    {:configuration {}
-                    ;; The keys will likely be string in the http vault client instance,
-                    ;; but this is easier for testing.
                     :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
           body (:response-body result)
           status (:response-code result)]
@@ -260,8 +256,6 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input nil}"}
                    (mock-client-atom)
                    "go.cd.secrets.secrets-lookup"
                    {:configuration {}
-                    ;; The keys will likely be string in the http vault client instance,
-                    ;; but this is easier for testing.
                     :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
           body (:response-body result)
           status (:response-code result)]
@@ -292,4 +286,43 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input nil}"}
       (is (= {:message "Error occurred during lookup of: [\"identities#batman\"]
 clojure.lang.ExceptionInfo: Mock Exception {}"}
              body))
-      (is (= 500 status)))))
+      (is (= 500 status))))
+  (testing "Can lookup token when specified without policies"
+    (let [result (plugin/handle-request
+                   (mock-client-atom)
+                   "go.cd.secrets.secrets-lookup"
+                   {:configuration {}
+                    :keys          ["TOKEN:"]})
+          body (:response-body result)
+          status (:response-code result)]
+      (is (= "TOKEN:" (:key (first body))))
+      (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
+      (is (= 200 status))))
+  (testing "Can lookup token when specified with policies"
+    (let [result (plugin/handle-request
+                   (mock-client-atom)
+                   "go.cd.secrets.secrets-lookup"
+                   {:configuration {}
+                    :keys          ["TOKEN:1,2,3"]})
+          body (:response-body result)
+          status (:response-code result)]
+      (is (= "TOKEN:1,2,3" (:key (first body))))
+      (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
+      (is (= 200 status))))
+  (testing "Can look up individual keys stored in vault given a well formed request"
+    (let [result (plugin/handle-request
+                   (mock-client-atom)
+                   "go.cd.secrets.secrets-lookup"
+                   {:configuration {}
+                    :keys          ["TOKEN:1,2" "TOKEN:" "identities#batman" "identities#hulk" "identities#wonder-woman"]})
+          body (:response-body result)
+          status (:response-code result)]
+      (is (= "TOKEN:1,2" (:key (first body))))
+      (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
+      (is (= "TOKEN:" (:key (second body))))
+      (is (and (string? (:value (second body))) (pos-int? (count (:value (second body))))))
+      (is (= [{:key "identities#batman" :value "Bruce Wayne"}
+              {:key "identities#hulk" :value "Bruce Banner"}
+              {:key "identities#wonder-woman" :value "Diana Prince"}]
+             (subvec body 2)))
+      (is (= 200 status)))))

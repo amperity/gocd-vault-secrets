@@ -8,7 +8,7 @@
   [[lein-cloverage "1.1.0"]]
 
   :dependencies
-  [[amperity/vault-clj "0.7.0"]
+  [[amperity/vault-clj "0.7.1"]
    [amperity/vault-clj-aws "0.0.2"]
    [com.google.code.gson/gson "2.8.5"]
    [org.clojure/clojure "1.10.1"]]
