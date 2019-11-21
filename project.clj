@@ -1,4 +1,4 @@
-(defproject amperity/gocd-vault-secrets "0.3.0"
+(defproject amperity/gocd-vault-secrets "0.3.1-SNAPSHOT"
   :description "A plugin for GoCD providing secret material support via HashiCorp Vault."
   :url "https://github.com/amperity/gocd-vault-secrets"
   :license {:name "Apache License 2.0"

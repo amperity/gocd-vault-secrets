@@ -2,7 +2,7 @@
 <go-plugin id="amperity.gocd.secret.vault" version="1">
   <about>
     <name>Vault Secrets</name>
-    <version>0.3.0</version>
+    <version>0.3.1-SNAPSHOT</version>
     <target-go-version>19.7.0</target-go-version>
     <description>Secret material resolution via HashiCorp Vault</description>
 
