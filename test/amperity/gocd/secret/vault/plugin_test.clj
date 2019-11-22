@@ -284,7 +284,7 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input nil}"}
                (plugin/handle-request
                  client
                  "go.cd.secrets.secrets-lookup"
-                 {:configuration {:force_read true}
+                 {:configuration {:force_read "true"}
                   :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]}))))))
   (testing "Fails cleanly when looking up secrets that don't exist"
     (let [result (plugin/handle-request (mock-client-atom) "go.cd.secrets.secrets-lookup"

@@ -45,7 +45,7 @@
    :auth_method {:metadata     {:required true :secure false}
                  :label        "Authentication Method"
                  :validate-fns []}
-   :force_read  {:metadata     {:required false :secure false}
+   :force_read  {:metadata     {:required true :secure false}
                  :label         "Force Read (Secret Caching)"
                  :validate-fns []}
    ;; Token Auth
@@ -269,7 +269,7 @@
     (when-not @client
       (authenticate-client-from-inputs! client (:configuration data)))
     (let [{token-keys true secrets-keys false} (group-by #(str/starts-with?  % signify-token-creation-str) (:keys data))
-          secrets (lookup-secrets @client secrets-keys (-> data :configuration :force_read))]
+          secrets (lookup-secrets @client secrets-keys (= (-> data :configuration :force_read) "true"))]
       (if-let [missing-keys (->> secrets
                                  (remove :value)
                                  (mapv :key)
