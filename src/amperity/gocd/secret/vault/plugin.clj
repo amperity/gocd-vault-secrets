@@ -46,7 +46,7 @@
                  :label        "Authentication Method"
                  :validate-fns []}
    :force_read  {:metadata     {:required false :secure false}
-                 :label         "Ignore cached secrets if this is checked (ignore secret TTLs)"
+                 :label         "Force Read (Secret Caching)"
                  :validate-fns []}
    ;; Token Auth
    :vault_token {:metadata     {:required false :secure true}
