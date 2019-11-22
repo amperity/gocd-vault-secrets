@@ -264,6 +264,28 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input nil}"}
               {:key "identities#wonder-woman" :value "Diana Prince"}]
              body))
       (is (= 200 status))))
+  (testing "Can force override cache when configured to"
+    (let [client (mock-client-atom)
+          orig-result (plugin/handle-request
+                        client
+                        "go.cd.secrets.secrets-lookup"
+                        {:keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})]
+      (is (= [{:key "identities#batman" :value "Bruce Wayne"}
+              {:key "identities#hulk" :value "Bruce Banner"}
+              {:key "identities#wonder-woman" :value "Diana Prince"}]
+             (:response-body orig-result)))
+      (vault/write-secret! @client "identities" {:batman "Wayne, Bruce"
+                                                 :hulk "Banner, Bruce"
+                                                 :wonder-woman "Prince, Diana"})
+      (is (= [{:key "identities#batman" :value "Wayne, Bruce"}
+              {:key "identities#hulk" :value "Banner, Bruce"}
+              {:key "identities#wonder-woman" :value "Prince, Diana"}]
+             (:response-body
+               (plugin/handle-request
+                 client
+                 "go.cd.secrets.secrets-lookup"
+                 {:configuration {:force_read true}
+                  :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]}))))))
   (testing "Fails cleanly when looking up secrets that don't exist"
     (let [result (plugin/handle-request (mock-client-atom) "go.cd.secrets.secrets-lookup"
                                         {:configuration {}

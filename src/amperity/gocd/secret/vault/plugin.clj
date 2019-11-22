@@ -45,6 +45,9 @@
    :auth_method {:metadata     {:required true :secure false}
                  :label        "Authentication Method"
                  :validate-fns []}
+   :force_read  {:metadata     {:required false :secure false}
+                 :label         "Ignore cached secrets if this is checked (ignore secret TTLs)"
+                 :validate-fns []}
    ;; Token Auth
    :vault_token {:metadata     {:required false :secure true}
                  :label        "Vault Token"
@@ -218,14 +221,17 @@
   Params:
   - `client`: The vault.client (*not* as an Atom) you want to use to access Vault
   - `gocd-lookup-keys`: A seq of strings, (<PATH>#<KEY> ...), where <PATH> corresponds to a Vault Path, and <KEY>
-  a key found at that path."
-  [client gocd-lookup-keys]
+  a key found at that path.
+  - `force-read`: Ignore secret TTLs and read from Vault regardless of cached secrets?"
+  [client gocd-lookup-keys force-read]
   (let [;; A map from Vault paths (as keywords) to their corresponding secret data (defaults to nil)
         paths-to-vals
         (->> gocd-lookup-keys
              (map #(first (str/split % #"#")))
              (into #{})
-             (map (fn [path] [(keyword path) (vault/read-secret client path {:not-found nil})]))
+             (map (fn [path]
+                    [(keyword path) (vault/read-secret client path {:not-found nil
+                                                                    :force-read force-read})]))
              (into {}))]
     (map
       (fn [gocd-lookup-key]
@@ -263,7 +269,7 @@
     (when-not @client
       (authenticate-client-from-inputs! client (:configuration data)))
     (let [{token-keys true secrets-keys false} (group-by #(str/starts-with?  % signify-token-creation-str) (:keys data))
-          secrets (lookup-secrets @client secrets-keys)]
+          secrets (lookup-secrets @client secrets-keys (-> data :configuration :force_read))]
       (if-let [missing-keys (->> secrets
                                  (remove :value)
                                  (mapv :key)
