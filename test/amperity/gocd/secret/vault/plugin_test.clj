@@ -116,7 +116,8 @@
                    (mock-client-atom) "go.cd.secrets.secrets-config.validate"
                    {:vault_addr  "https://amperity.com"
                     :auth_method "token"
-                    :vault_token "abc123"})
+                    :vault_token "abc123"
+                    :force_read  "true"})
           body (:response-body result)
           status (:response-code result)]
       (is (= [] body))
@@ -130,7 +131,8 @@
                      {:vault_addr      "https://amperity.com"
                       :auth_method     "aws-iam"
                       :iam_role        "role"
-                      :aws_credentials (aws/derive-credentials "hello" "goodbye" "7")})
+                      :aws_credentials (aws/derive-credentials "hello" "goodbye" "7")
+                      :force_read "false"})
             body (:response-body result)
             status (:response-code result)]
         (is (= [] body))
@@ -138,7 +140,8 @@
   (testing "Validate correctly handles case with errors (no false negatives, no false positives)"
     (let [result (plugin/handle-request
                    (mock-client-atom) "go.cd.secrets.secrets-config.validate"
-                   {:vault_addr "protocol://amperity.com"})
+                   {:vault_addr "protocol://amperity.com"
+                    :force_read "false"})
           body (:response-body result)
           status (:response-code result)]
       (is (= [{:key     :vault_addr
@@ -157,7 +160,8 @@
                      fake-client "go.cd.secrets.secrets-config.validate"
                      {:vault_addr  "https://amperity.com"
                       :auth_method "token"
-                      :token "defined token"})
+                      :token "defined token"
+                      :force_read "false"})
             body (:response-body result)
             status (:response-code result)]
         (is (= 200 status))
@@ -183,7 +187,8 @@
           result (plugin/handle-request
                    fake-client "go.cd.secrets.secrets-config.validate"
                    {:vault_addr  "https://amperity.com"
-                    :auth_method "token"})
+                    :auth_method "token"
+                    :force_read "false"})
           body (:response-body result)
           status (:response-code result)]
       (is (= 200 status))
@@ -196,7 +201,8 @@ java.lang.IllegalArgumentException: Token credential must be a string"}]
           result (plugin/handle-request
                    fake-client "go.cd.secrets.secrets-config.validate"
                    {:vault_addr  "https://amperity.com"
-                    :auth_method "fake-id-mclovin"})
+                    :auth_method "fake-id-mclovin"
+                    :force_read "true"})
           body (:response-body result)
           status (:response-code result)]
       (is (= 200 status))
