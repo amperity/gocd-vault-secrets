@@ -80,7 +80,17 @@
     (let [response {:response-code 200 :response-headers {} :response-body {:try "this"}}]
       (with-redefs [plugin/handle-request (fn [_ _ _] response)]
         (is (response-equal (DefaultGoPluginApiResponse/success "{\"try\":\"this\"}")
-                            (default-handler)))))))
+                            (default-handler))))))
+  (testing "Handler when request includes a JSON body and handle-method returns a json response"
+    (let [response {:response-code 200 :response-headers {} :response-body {:try "this"}}]
+      (with-redefs [plugin/handle-request (fn [_ _ _] response)]
+        (is (response-equal (DefaultGoPluginApiResponse/success "{\"try\":\"this\"}")
+                            (plugin/handler
+                              (mock-client-atom)
+                              (default-go-plugin-api-request "ignored"  {:try "this"
+                                                                         :and ["an array"]
+                                                                         "or" {:another "map"}
+                                                                         :ok #{"yep"}}))))))))
 
 
 (deftest initialize!-test
