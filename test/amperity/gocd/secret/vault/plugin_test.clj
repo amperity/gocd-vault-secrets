@@ -116,7 +116,8 @@
                    (mock-client-atom) "go.cd.secrets.secrets-config.validate"
                    {:vault_addr  "https://amperity.com"
                     :auth_method "token"
-                    :vault_token "abc123"})
+                    :vault_token "abc123"
+                    :force_read  "true"})
           body (:response-body result)
           status (:response-code result)]
       (is (= [] body))
@@ -130,7 +131,8 @@
                      {:vault_addr      "https://amperity.com"
                       :auth_method     "aws-iam"
                       :iam_role        "role"
-                      :aws_credentials (aws/derive-credentials "hello" "goodbye" "7")})
+                      :aws_credentials (aws/derive-credentials "hello" "goodbye" "7")
+                      :force_read "false"})
             body (:response-body result)
             status (:response-code result)]
         (is (= [] body))
@@ -138,7 +140,8 @@
   (testing "Validate correctly handles case with errors (no false negatives, no false positives)"
     (let [result (plugin/handle-request
                    (mock-client-atom) "go.cd.secrets.secrets-config.validate"
-                   {:vault_addr "protocol://amperity.com"})
+                   {:vault_addr "protocol://amperity.com"
+                    :force_read "false"})
           body (:response-body result)
           status (:response-code result)]
       (is (= [{:key     :vault_addr
@@ -157,7 +160,8 @@
                      fake-client "go.cd.secrets.secrets-config.validate"
                      {:vault_addr  "https://amperity.com"
                       :auth_method "token"
-                      :token "defined token"})
+                      :token "defined token"
+                      :force_read "false"})
             body (:response-body result)
             status (:response-code result)]
         (is (= 200 status))
@@ -183,7 +187,8 @@
           result (plugin/handle-request
                    fake-client "go.cd.secrets.secrets-config.validate"
                    {:vault_addr  "https://amperity.com"
-                    :auth_method "token"})
+                    :auth_method "token"
+                    :force_read "false"})
           body (:response-body result)
           status (:response-code result)]
       (is (= 200 status))
@@ -196,7 +201,8 @@ java.lang.IllegalArgumentException: Token credential must be a string"}]
           result (plugin/handle-request
                    fake-client "go.cd.secrets.secrets-config.validate"
                    {:vault_addr  "https://amperity.com"
-                    :auth_method "fake-id-mclovin"})
+                    :auth_method "fake-id-mclovin"
+                    :force_read "true"})
           body (:response-body result)
           status (:response-code result)]
       (is (= 200 status))
@@ -264,6 +270,28 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input nil}"}
               {:key "identities#wonder-woman" :value "Diana Prince"}]
              body))
       (is (= 200 status))))
+  (testing "Can force override cache when configured to"
+    (let [client (mock-client-atom)
+          orig-result (plugin/handle-request
+                        client
+                        "go.cd.secrets.secrets-lookup"
+                        {:keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})]
+      (is (= [{:key "identities#batman" :value "Bruce Wayne"}
+              {:key "identities#hulk" :value "Bruce Banner"}
+              {:key "identities#wonder-woman" :value "Diana Prince"}]
+             (:response-body orig-result)))
+      (vault/write-secret! @client "identities" {:batman "Wayne, Bruce"
+                                                 :hulk "Banner, Bruce"
+                                                 :wonder-woman "Prince, Diana"})
+      (is (= [{:key "identities#batman" :value "Wayne, Bruce"}
+              {:key "identities#hulk" :value "Banner, Bruce"}
+              {:key "identities#wonder-woman" :value "Prince, Diana"}]
+             (:response-body
+               (plugin/handle-request
+                 client
+                 "go.cd.secrets.secrets-lookup"
+                 {:configuration {:force_read "true"}
+                  :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]}))))))
   (testing "Fails cleanly when looking up secrets that don't exist"
     (let [result (plugin/handle-request (mock-client-atom) "go.cd.secrets.secrets-lookup"
                                         {:configuration {}
