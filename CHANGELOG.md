@@ -5,7 +5,11 @@ All notable changes to this project will be documented in this file. This change
 log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## [Unreleased]
-...
+..
+
+## [0.3.2] - 2019-12-06
+- Fixed bug where vault lease timer didn't run so client tokens weren't renewed.
+  [#29](https://github.com/amperity/gocd-vault-secrets/pull/29)
 
 ## [0.3.1] - 2019-11-22
 - Added an option to ignore TTLs specified in Vault and force-read secrets
@@ -27,7 +31,8 @@ log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 - Supports one Auth Method, direct Vault tokens
   [#4](https://github.com/amperity/gocd-vault-secrets/pull/4)
 
-[Unreleased]: https://github.com/amperity/gocd-vault-secrets/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/amperity/gocd-vault-secrets/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/amperity/gocd-vault-secrets/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/amperity/gocd-vault-secrets/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/amperity/gocd-vault-secrets/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/amperity/gocd-vault-secrets/compare/v0.1.0...v0.2.0
