@@ -5,6 +5,7 @@
     [amperity.gocd.secret.vault.util :as u]
     [clojure.java.io :as io]
     [clojure.string :as str]
+    [com.stuartsierra.component :as component]
     [vault.client.ext.aws]
     [vault.client.http]
     [vault.core :as vault])
@@ -165,7 +166,8 @@
   - `inputs` A map containing the user inputted settings for the plugin"
   [client inputs]
   (when-not (= (:api-url @client) (:vault_addr inputs))
-    (reset! client (vault/new-client (:vault_addr inputs))))
+    (reset! client (component/start
+                     (vault/new-client (:vault_addr inputs)))))
   (case (:auth_method inputs)
     "token"
     (vault/authenticate! @client :token
