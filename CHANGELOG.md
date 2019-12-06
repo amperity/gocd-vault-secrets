@@ -5,7 +5,8 @@ All notable changes to this project will be documented in this file. This change
 log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## [Unreleased]
-...
+- Fixed bug where vault lease timer didn't run so client tokens weren't renewed.
+  [#29](https://github.com/amperity/gocd-vault-secrets/pull/29)
 
 ## [0.3.1] - 2019-11-22
 - Added an option to ignore TTLs specified in Vault and force-read secrets
