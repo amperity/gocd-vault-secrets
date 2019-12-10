@@ -63,12 +63,6 @@
   (.toJson gson (stringify-keywords value)))
 
 
-(defn json-decode-vec
-  "Decode a vector from a JSON string."
-  [^String json]
-  (gson->clj (.fromJson gson json java.util.List)))
-
-
 (defn json-decode-map
   "Decode a map from a JSON string."
   [^String json]

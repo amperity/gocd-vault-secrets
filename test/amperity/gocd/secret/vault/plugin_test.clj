@@ -20,11 +20,15 @@
 (defn default-go-plugin-api-request
   "A .DefaultGoPluginApiRequest with the given name and params.
   Parameters:
-  - `request-name` string of the name (essentially the route) of the request
-  - `request-params` map of request parameters"
-  ([request-name request-params]
+  - `request-name`: string of the name (essentially the route) of the request
+  - `request-params`: map of request parameters
+  - `request-body`: Json formatted request body represented as string"
+  ([request-name request-params request-body]
    (doto (DefaultGoPluginApiRequest. nil nil request-name)
-     (.setRequestParams request-params)))
+     (.setRequestParams request-params)
+     (.setRequestBody request-body)))
+  ([request-name request-params]
+   (default-go-plugin-api-request request-name request-params nil))
   ([request-name]
    (default-go-plugin-api-request request-name {})))
 
@@ -80,7 +84,17 @@
     (let [response {:response-code 200 :response-headers {} :response-body {:try "this"}}]
       (with-redefs [plugin/handle-request (fn [_ _ _] response)]
         (is (response-equal (DefaultGoPluginApiResponse/success "{\"try\":\"this\"}")
-                            (default-handler)))))))
+                            (default-handler))))))
+  (testing "Handler when request includes a JSON body and handle-method returns a json response"
+    (let [response {:response-code 200 :response-headers {} :response-body {:try "this"}}]
+      (with-redefs [plugin/handle-request (fn [_ _ _] response)]
+        (is (response-equal (DefaultGoPluginApiResponse/success "{\"try\":\"this\"}")
+                            (plugin/handler
+                              (mock-client-atom)
+                              (default-go-plugin-api-request "ignored" {}  (u/json-encode {:try "this"
+                                                                                           :and ["a" "vec"]
+                                                                                           "or" {:another "map"}
+                                                                                           :maybe #{1 2 3}})))))))))
 
 
 (deftest initialize!-test
