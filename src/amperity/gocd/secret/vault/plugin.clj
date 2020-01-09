@@ -5,7 +5,6 @@
     [amperity.gocd.secret.vault.util :as u]
     [clojure.java.io :as io]
     [clojure.string :as str]
-    [com.stuartsierra.component :as component]
     [vault.client.ext.aws]
     [vault.client.http]
     [vault.core :as vault])
@@ -157,31 +156,27 @@
         (some #(% field-value) (:validate-fns field-model))))))
 
 
-(defn- client-from-inputs
-  [inputs]
-  (component/start
-    (vault/new-client (:vault_addr inputs))))
-
-
 (defn- authenticate-client-from-inputs!
-  "Authenticates the Vault Client.
+  "Returns an authenticated Vault Client from plugin settings.
 
   Params:
-  - `client` An atom containing the Vault Client you wish to authenticate, may contain nil if you want a new client.
   - `inputs` A map containing the user inputted settings for the plugin"
-  [client inputs]
-  (case (:auth_method inputs)
-    "token"
-    (vault/authenticate! client :token
-                         (:vault_token inputs))
+  [inputs]
+  (let [client (vault/new-client (:vault_addr inputs))]
+    (case (:auth_method inputs)
+      "token"
+      (vault/authenticate! client :token
+                           (:vault_token inputs))
 
-    "aws-iam"
-    (vault/authenticate! client :aws-iam
-                         {:iam-role    (:iam_role inputs)
-                          :credentials ^AWSCredentials (:aws_credentials inputs)})
+      "aws-iam"
+      (vault/authenticate! client :aws-iam
+                           {:iam-role    (:iam_role inputs)
+                            :credentials ^AWSCredentials (:aws_credentials inputs)})
 
-    (throw (ex-info "Unhandled vault auth type"
-                    {:user-input (:auth_method inputs)}))))
+      (throw (ex-info "Unhandled vault auth type"
+                      {:user-input (:auth_method inputs)})))
+
+    client))
 
 
 ;; This call is expected to validate the user inputs that form a part of
@@ -194,19 +189,16 @@
                          :message error-message}))
         errors-found (keep input-error (keys input-schema))]
     (if (empty? errors-found)
-      (let [client (client-from-inputs data)]
-        (try
-          (authenticate-client-from-inputs! client data)
+      (try
+        (authenticate-client-from-inputs! data)
+        {:response-code 200
+         :response-headers {}
+         :response-body []}
+        (catch Exception ex
           {:response-code 200
            :response-headers {}
-           :response-body []}
-          (catch Exception ex
-            {:response-code 200
-             :response-headers {}
-             :response-body [{:key :auth_method
-                              :message (str "Unable to authenticate Vault client:\n" ex)}]})
-          (finally
-            (component/stop client))))
+           :response-body [{:key :auth_method
+                            :message (str "Unable to authenticate Vault client:\n" ex)}]}))
       {:response-code    200
        :response-headers {}
        :response-body    (into [] errors-found)})))
@@ -266,26 +258,23 @@
 ;; for secrets from the external Secret Manager.
 (defmethod handle-request "go.cd.secrets.secrets-lookup"
   [_ data]
-  (let [client (client-from-inputs (:configuration data))]
-    (try
-      (authenticate-client-from-inputs! client (:configuration data))
-      (let [{token-keys true secrets-keys false} (group-by #(str/starts-with?  % signify-token-creation-str) (:keys data))
-            secrets (lookup-secrets client secrets-keys (= (-> data :configuration :force_read) "true"))]
-        (if-let [missing-keys (->> secrets
-                                   (remove :value)
-                                   (mapv :key)
-                                   not-empty)]
-          {:response-code    404
-           :response-headers {}
-           :response-body    {:message (str "Unable to resolve key(s) " missing-keys)}}
-          {:response-code    200
-           :response-headers {}
-           :response-body    (-> (create-tokens! client token-keys)
-                                 (concat secrets)
-                                 (->> (mapv #(update % :value str))))}))
-      (catch ExceptionInfo ex
-        {:response-code    500
+  (try
+    (let [client (authenticate-client-from-inputs! (:configuration data))
+          {token-keys true secrets-keys false} (group-by #(str/starts-with?  % signify-token-creation-str) (:keys data))
+          secrets (lookup-secrets client secrets-keys (= (-> data :configuration :force_read) "true"))]
+      (if-let [missing-keys (->> secrets
+                                 (remove :value)
+                                 (mapv :key)
+                                 not-empty)]
+        {:response-code    404
          :response-headers {}
-         :response-body    {:message (str "Error occurred during lookup of: " (:keys data) "\n" ex)}})
-      (finally
-        (component/stop client)))))
+         :response-body    {:message (str "Unable to resolve key(s) " missing-keys)}}
+        {:response-code    200
+         :response-headers {}
+         :response-body    (-> (create-tokens! client token-keys)
+                               (concat secrets)
+                               (->> (mapv #(update % :value str))))}))
+    (catch ExceptionInfo ex
+      {:response-code    500
+       :response-headers {}
+       :response-body    {:message (str "Error occurred during lookup of: " (:keys data) "\n" ex)}})))

@@ -195,125 +195,119 @@ clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input \"fake-id-mcl
 
 
 (deftest secrets-lookup
-  (with-redefs [plugin/client-from-inputs
-                (fn [_]
-                  (mock-client))]
-    (testing "If authentication fails, lookup fails cleanly"
+  (testing "If authentication fails, lookup fails cleanly"
+    (let [result (plugin/handle-request
+                   "go.cd.secrets.secrets-lookup"
+                   {:configuration {:vault_addr "https://amperity.com"}
+                    :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
+          body (:response-body result)
+          status (:response-code result)]
+      (is (= {:message "Error occurred during lookup of: [\"identities#batman\" \"identities#hulk\" \"identities#wonder-woman\"]
+clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input nil}"}
+             body))
+      (is (= 500 status))))
+  (with-redefs [plugin/authenticate-client-from-inputs! (constantly (mock-client))]
+    (testing "Results are returned as expected"
       (let [result (plugin/handle-request
                      "go.cd.secrets.secrets-lookup"
                      {:configuration {}
                       :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
             body (:response-body result)
             status (:response-code result)]
-        (is (= {:message "Error occurred during lookup of: [\"identities#batman\" \"identities#hulk\" \"identities#wonder-woman\"]
-clojure.lang.ExceptionInfo: Unhandled vault auth type {:user-input nil}"}
+        (is (= [{:key "identities#batman" :value "Bruce Wayne"}
+                {:key "identities#hulk" :value "Bruce Banner"}
+                {:key "identities#wonder-woman" :value "Diana Prince"}]
                body))
-        (is (= 500 status))))
-    (with-redefs [plugin/authenticate-client-from-inputs!
-                  (fn [_ _] nil)]
-      (testing "Results are returned as expected"
-        (let [result (plugin/handle-request
+        (is (= 200 status))))
+    (testing "Can look up individual keys stored in vault given a well formed request"
+      (let [result (plugin/handle-request
+                     "go.cd.secrets.secrets-lookup"
+                     {:configuration {}
+                      :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
+            body (:response-body result)
+            status (:response-code result)]
+        (is (= [{:key "identities#batman" :value "Bruce Wayne"}
+                {:key "identities#hulk" :value "Bruce Banner"}
+                {:key "identities#wonder-woman" :value "Diana Prince"}]
+               body))
+        (is (= 200 status))))
+    (testing "Can force override cache when configured to"
+      (let [client (mock-client)]
+        (with-redefs [plugin/authenticate-client-from-inputs! (constantly client)]
+          (let [orig-result (plugin/handle-request
+                              "go.cd.secrets.secrets-lookup"
+                              {:keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})]
+            (is (= [{:key "identities#batman" :value "Bruce Wayne"}
+                    {:key "identities#hulk" :value "Bruce Banner"}
+                    {:key "identities#wonder-woman" :value "Diana Prince"}]
+                   (:response-body orig-result)))
+            (vault/write-secret! client "identities" {:batman "Wayne, Bruce"
+                                                      :hulk "Banner, Bruce"
+                                                      :wonder-woman "Prince, Diana"})
+            (is (= [{:key "identities#batman" :value "Wayne, Bruce"}
+                    {:key "identities#hulk" :value "Banner, Bruce"}
+                    {:key "identities#wonder-woman" :value "Prince, Diana"}]
+                   (:response-body
+                     (plugin/handle-request
                        "go.cd.secrets.secrets-lookup"
-                       {:configuration {}
-                        :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
-              body (:response-body result)
-              status (:response-code result)]
-          (is (= [{:key "identities#batman" :value "Bruce Wayne"}
-                  {:key "identities#hulk" :value "Bruce Banner"}
-                  {:key "identities#wonder-woman" :value "Diana Prince"}]
-                 body))
-          (is (= 200 status))))
-      (testing "Can look up individual keys stored in vault given a well formed request"
-        (let [result (plugin/handle-request
-                       "go.cd.secrets.secrets-lookup"
-                       {:configuration {}
-                        :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})
-              body (:response-body result)
-              status (:response-code result)]
-          (is (= [{:key "identities#batman" :value "Bruce Wayne"}
-                  {:key "identities#hulk" :value "Bruce Banner"}
-                  {:key "identities#wonder-woman" :value "Diana Prince"}]
-                 body))
-          (is (= 200 status))))
-      (testing "Can force override cache when configured to"
-        (let [client (mock-client)]
-          (with-redefs [plugin/client-from-inputs
-                        (fn [_] client)]
-            (let [orig-result (plugin/handle-request
-                                "go.cd.secrets.secrets-lookup"
-                                {:keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]})]
-              (is (= [{:key "identities#batman" :value "Bruce Wayne"}
-                      {:key "identities#hulk" :value "Bruce Banner"}
-                      {:key "identities#wonder-woman" :value "Diana Prince"}]
-                     (:response-body orig-result)))
-              (vault/write-secret! client "identities" {:batman "Wayne, Bruce"
-                                                        :hulk "Banner, Bruce"
-                                                        :wonder-woman "Prince, Diana"})
-              (is (= [{:key "identities#batman" :value "Wayne, Bruce"}
-                      {:key "identities#hulk" :value "Banner, Bruce"}
-                      {:key "identities#wonder-woman" :value "Prince, Diana"}]
-                     (:response-body
-                       (plugin/handle-request
+                       {:configuration {:force_read "true"}
+                        :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]}))))))))
+    (testing "Fails cleanly when looking up secrets that don't exist"
+      (let [result (plugin/handle-request "go.cd.secrets.secrets-lookup"
+                                          {:configuration {}
+                                           :keys          ["identities#dr-who" "identities#jack-the-ripper"]})
+            body (:response-body result)
+            status (:response-code result)]
+        (is (= {:message "Unable to resolve key(s) [\"identities#dr-who\" \"identities#jack-the-ripper\"]"}
+               body))
+        (is (= 404 status))))
+    (testing "Fails cleanly when other lookup error occurs"
+      (let [mock-client-that-errors (reify vault.core/SecretClient
+                                      (read-secret [_ _ _] (throw (ex-info "Mock Exception" {}))))]
+        (with-redefs [plugin/authenticate-client-from-inputs! (constantly mock-client-that-errors)]
+          (let [result (plugin/handle-request
                          "go.cd.secrets.secrets-lookup"
-                         {:configuration {:force_read "true"}
-                          :keys          ["identities#batman" "identities#hulk" "identities#wonder-woman"]}))))))))
-      (testing "Fails cleanly when looking up secrets that don't exist"
-        (let [result (plugin/handle-request "go.cd.secrets.secrets-lookup"
-                                            {:configuration {}
-                                             :keys          ["identities#dr-who" "identities#jack-the-ripper"]})
-              body (:response-body result)
-              status (:response-code result)]
-          (is (= {:message "Unable to resolve key(s) [\"identities#dr-who\" \"identities#jack-the-ripper\"]"}
-                 body))
-          (is (= 404 status))))
-      (testing "Fails cleanly when other lookup error occurs"
-        (let [mock-client-that-errors (reify vault.core/SecretClient
-                                        (read-secret [_ _ _] (throw (ex-info "Mock Exception" {}))))]
-          (with-redefs [plugin/client-from-inputs
-                        (fn [_] mock-client-that-errors)]
-            (let [result (plugin/handle-request
-                           "go.cd.secrets.secrets-lookup"
-                           {:configuration {}
-                            :keys          ["identities#batman"]})
-                  body (:response-body result)
-                  status (:response-code result)]
-              (is (= {:message "Error occurred during lookup of: [\"identities#batman\"]
+                         {:configuration {}
+                          :keys          ["identities#batman"]})
+                body (:response-body result)
+                status (:response-code result)]
+            (is (= {:message "Error occurred during lookup of: [\"identities#batman\"]
 clojure.lang.ExceptionInfo: Mock Exception {}"}
-                     body))
-              (is (= 500 status))))))
-      (testing "Can lookup token when specified without policies"
-        (let [result (plugin/handle-request
-                       "go.cd.secrets.secrets-lookup"
-                       {:configuration {}
-                        :keys          ["TOKEN:"]})
-              body (:response-body result)
-              status (:response-code result)]
-          (is (= "TOKEN:" (:key (first body))))
-          (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
-          (is (= 200 status))))
-      (testing "Can lookup token when specified with policies"
-        (let [result (plugin/handle-request
-                       "go.cd.secrets.secrets-lookup"
-                       {:configuration {}
-                        :keys          ["TOKEN:1,2,3"]})
-              body (:response-body result)
-              status (:response-code result)]
-          (is (= "TOKEN:1,2,3" (:key (first body))))
-          (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
-          (is (= 200 status))))
-      (testing "Can look up individual keys stored in vault given a well formed request"
-        (let [result (plugin/handle-request
-                       "go.cd.secrets.secrets-lookup"
-                       {:configuration {}
-                        :keys          ["TOKEN:1,2" "TOKEN:" "identities#batman" "identities#hulk" "identities#wonder-woman"]})
-              body (:response-body result)
-              status (:response-code result)]
-          (is (= "TOKEN:1,2" (:key (first body))))
-          (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
-          (is (= "TOKEN:" (:key (second body))))
-          (is (and (string? (:value (second body))) (pos-int? (count (:value (second body))))))
-          (is (= [{:key "identities#batman" :value "Bruce Wayne"}
-                  {:key "identities#hulk" :value "Bruce Banner"}
-                  {:key "identities#wonder-woman" :value "Diana Prince"}]
-                 (subvec body 2)))
-          (is (= 200 status)))))))
+                   body))
+            (is (= 500 status))))))
+    (testing "Can lookup token when specified without policies"
+      (let [result (plugin/handle-request
+                     "go.cd.secrets.secrets-lookup"
+                     {:configuration {}
+                      :keys          ["TOKEN:"]})
+            body (:response-body result)
+            status (:response-code result)]
+        (is (= "TOKEN:" (:key (first body))))
+        (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
+        (is (= 200 status))))
+    (testing "Can lookup token when specified with policies"
+      (let [result (plugin/handle-request
+                     "go.cd.secrets.secrets-lookup"
+                     {:configuration {}
+                      :keys          ["TOKEN:1,2,3"]})
+            body (:response-body result)
+            status (:response-code result)]
+        (is (= "TOKEN:1,2,3" (:key (first body))))
+        (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
+        (is (= 200 status))))
+    (testing "Can look up individual keys stored in vault given a well formed request"
+      (let [result (plugin/handle-request
+                     "go.cd.secrets.secrets-lookup"
+                     {:configuration {}
+                      :keys          ["TOKEN:1,2" "TOKEN:" "identities#batman" "identities#hulk" "identities#wonder-woman"]})
+            body (:response-body result)
+            status (:response-code result)]
+        (is (= "TOKEN:1,2" (:key (first body))))
+        (is (and (string? (:value (first body))) (pos-int? (count (:value (first body))))))
+        (is (= "TOKEN:" (:key (second body))))
+        (is (and (string? (:value (second body))) (pos-int? (count (:value (second body))))))
+        (is (= [{:key "identities#batman" :value "Bruce Wayne"}
+                {:key "identities#hulk" :value "Bruce Banner"}
+                {:key "identities#wonder-woman" :value "Diana Prince"}]
+               (subvec body 2)))
+        (is (= 200 status))))))
