@@ -7,6 +7,10 @@ log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 ## [Unreleased]
 ..
 
+## [0.3.3] - 2020-01-09
+- Fixed bug where plugin couldn't handle reading secrets from multiple configs.
+  [#31](https://github.com/amperity/gocd-vault-secrets/pull/31)
+
 ## [0.3.2] - 2019-12-06
 - Fixed bug where vault lease timer didn't run so client tokens weren't renewed.
   [#29](https://github.com/amperity/gocd-vault-secrets/pull/29)
