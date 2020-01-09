@@ -5,7 +5,6 @@
     [amperity.gocd.secret.vault.util :as u]
     [clojure.java.io :as io]
     [clojure.string :as str]
-    [com.stuartsierra.component :as component]
     [vault.client.ext.aws]
     [vault.client.http]
     [vault.core :as vault])
@@ -26,8 +25,7 @@
 (defn initialize!
   "Set up the vault client."
   [logger app-accessor]
-  (alter-var-root #'log/logger (constantly logger))
-  (atom nil))
+  (alter-var-root #'log/logger (constantly logger)))
 
 
 ;; ## Model
@@ -77,24 +75,24 @@
   - `req-name`: string, determines how to dispatch among implementing methods, essentially the route
   - `data`: map, the body of the message passed from the GoCD server"
   (fn dispatch
-    [client req-name data]
+    [req-name data]
     ;(log/logger "info" (str "Vault plugin received: " req-name) nil)  ;; Most useful log statement for debugging
     req-name))
 
 
 (defmethod handle-request :default
-  [_ req-name _]
+  [req-name _]
   (throw (UnhandledRequestTypeException. req-name)))
 
 
 (defn handler
   "Request handling entry-point."
-  [client ^GoPluginApiRequest request]
+  [^GoPluginApiRequest request]
   (try
     (let [req-name (.requestName request)
           req-data (when-not (str/blank? (.requestBody request))
                      (u/json-decode-map (.requestBody request)))
-          {status :response-code body :response-body headers :response-headers} (handle-request client req-name req-data)]
+          {status :response-code body :response-body headers :response-headers} (handle-request req-name req-data)]
       (DefaultGoPluginApiResponse. status (u/json-encode body) headers))
     (catch UnhandledRequestTypeException ex
       (throw ex))
@@ -111,7 +109,7 @@
 ;; This call is expected to return the icon for the plugin, so as to make
 ;; it easy for users to identify the plugin.
 (defmethod handle-request "go.cd.secrets.get-icon"
-  [_ _ _]
+  [_ _]
   (let [icon-svg (slurp (io/resource "amperity/gocd/secret/vault/logo.svg"))]
     {:response-code    200
      :response-headers {}
@@ -124,7 +122,7 @@
 ;; This message should return an HTML template allowing users to configure the
 ;; secret backend in GoCD.
 (defmethod handle-request "go.cd.secrets.secrets-config.get-view"
-  [_ _ _]
+  [_ _]
   (let [view-html (slurp (io/resource "amperity/gocd/secret/vault/secrets-view.html"))]
     {:response-code    200
      :response-headers {}
@@ -134,7 +132,7 @@
 ;; This message should return metadata about the available settings for
 ;; configuring a secret backend in GoCD.
 (defmethod handle-request "go.cd.secrets.secrets-config.get-metadata"
-  [_ _ _]
+  [_ _]
   {:response-code    200
    :response-headers {}
    :response-body    (mapv (fn [input-key]
@@ -159,50 +157,43 @@
 
 
 (defn- authenticate-client-from-inputs!
-  "Authenticates the Vault Client.
+  "Returns an authenticated Vault Client from plugin settings.
 
   Params:
-  - `client` An atom containing the Vault Client you wish to authenticate, may contain nil if you want a new client.
   - `inputs` A map containing the user inputted settings for the plugin"
-  [client inputs]
-  (when-not (= (:api-url @client) (:vault_addr inputs))
-    (reset! client (component/start
-                     (vault/new-client (:vault_addr inputs)))))
-  (case (:auth_method inputs)
-    "token"
-    (vault/authenticate! @client :token
-                         (:vault_token inputs))
+  [inputs]
+  (let [client (vault/new-client (:vault_addr inputs))]
+    (case (:auth_method inputs)
+      "token"
+      (vault/authenticate! client :token
+                           (:vault_token inputs))
 
-    "aws-iam"
-    (vault/authenticate! @client :aws-iam
-                         {:iam-role    (:iam_role inputs)
-                          :credentials ^AWSCredentials (:aws_credentials inputs)})
+      "aws-iam"
+      (vault/authenticate! client :aws-iam
+                           {:iam-role    (:iam_role inputs)
+                            :credentials ^AWSCredentials (:aws_credentials inputs)})
 
-    (throw (ex-info "Unhandled vault auth type"
-                    {:user-input (:auth_method inputs)}))))
+      (throw (ex-info "Unhandled vault auth type"
+                      {:user-input (:auth_method inputs)})))
+
+    client))
 
 
 ;; This call is expected to validate the user inputs that form a part of
 ;; the secret backend configuration.
 (defmethod handle-request "go.cd.secrets.secrets-config.validate"
-  [client _ data]
+  [_ data]
   (let [input-error (fn [field-key]
                       (when-let [error-message (input-error-message field-key (field-key data))]
                         {:key field-key
                          :message error-message}))
         errors-found (keep input-error (keys input-schema))]
-    (if (and (empty? errors-found)
-             ;; Need to Authenticate?
-             (not (and (= (:api-url @client) (:vault_addr data))
-                       (= (:auth-type @client) (:auth_method data))
-                       (= (:client-token @client) (:vault_token data)))))
-      ;; Authenticate Vault client
+    (if (empty? errors-found)
       (try
-        (authenticate-client-from-inputs! client data)
+        (authenticate-client-from-inputs! data)
         {:response-code 200
          :response-headers {}
          :response-body []}
-
         (catch Exception ex
           {:response-code 200
            :response-headers {}
@@ -266,12 +257,11 @@
 ;; request body will also have the configuration required to connect and lookup
 ;; for secrets from the external Secret Manager.
 (defmethod handle-request "go.cd.secrets.secrets-lookup"
-  [client _ data]
+  [_ data]
   (try
-    (when-not @client
-      (authenticate-client-from-inputs! client (:configuration data)))
-    (let [{token-keys true secrets-keys false} (group-by #(str/starts-with?  % signify-token-creation-str) (:keys data))
-          secrets (lookup-secrets @client secrets-keys (= (-> data :configuration :force_read) "true"))]
+    (let [client (authenticate-client-from-inputs! (:configuration data))
+          {token-keys true secrets-keys false} (group-by #(str/starts-with?  % signify-token-creation-str) (:keys data))
+          secrets (lookup-secrets client secrets-keys (= (-> data :configuration :force_read) "true"))]
       (if-let [missing-keys (->> secrets
                                  (remove :value)
                                  (mapv :key)
@@ -281,7 +271,7 @@
          :response-body    {:message (str "Unable to resolve key(s) " missing-keys)}}
         {:response-code    200
          :response-headers {}
-         :response-body    (-> (create-tokens! @client token-keys)
+         :response-body    (-> (create-tokens! client token-keys)
                                (concat secrets)
                                (->> (mapv #(update % :value str))))}))
     (catch ExceptionInfo ex
