@@ -137,6 +137,7 @@
                      {:vault_addr      "https://amperity.com"
                       :auth_method     "aws-iam"
                       :iam_role        "role"
+                      :sts-region      "us-west-2"
                       :aws_credentials (aws/derive-credentials "hello" "goodbye" "7")
                       :force_read "false"})
             body (:response-body result)

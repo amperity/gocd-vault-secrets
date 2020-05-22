@@ -55,7 +55,11 @@
    ;; AWS Auth
    :iam_role {:metadata {:required false :secure false}
               :label "IAM Role"
-              :validate-fns []}})
+              :validate-fns []}
+
+   :sts_region {:metadata {:required false :secure false}
+                :label "STS Signing Region"
+                :validate-fns []}})
 
 ;; Signifies a token creation instead of a secret lookup
 (def signify-token-creation-str "TOKEN:")
@@ -171,6 +175,7 @@
       "aws-iam"
       (vault/authenticate! client :aws-iam
                            {:iam-role    (:iam_role inputs)
+                            :sts-region  (:sts_region inputs)
                             :credentials ^AWSCredentials (:aws_credentials inputs)})
 
       (throw (ex-info "Unhandled vault auth type"

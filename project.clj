@@ -9,7 +9,7 @@
 
   :dependencies
   [[amperity/vault-clj "0.7.1"]
-   [amperity/vault-clj-aws "0.0.2"]
+   [amperity/vault-clj-aws "0.0.3"]
    [com.google.code.gson/gson "2.8.5"]
    [org.clojure/clojure "1.10.1"]]
 
