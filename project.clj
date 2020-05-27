@@ -1,4 +1,4 @@
-(defproject amperity/gocd-vault-secrets "0.3.3"
+(defproject amperity/gocd-vault-secrets "0.4.0"
   :description "A plugin for GoCD providing secret material support via HashiCorp Vault."
   :url "https://github.com/amperity/gocd-vault-secrets"
   :license {:name "Apache License 2.0"
@@ -9,7 +9,7 @@
 
   :dependencies
   [[amperity/vault-clj "0.7.1"]
-   [amperity/vault-clj-aws "0.0.2"]
+   [amperity/vault-clj-aws "0.0.3"]
    [com.google.code.gson/gson "2.8.5"]
    [org.clojure/clojure "1.10.1"]]
 

@@ -7,6 +7,10 @@ log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 ## [Unreleased]
 ..
 
+## [0.4.0] - 2020-05-26
+- Add ability to configure STS signing region for AWS IAM auth method.
+  [#32](https://github.com/amperity/gocd-vault-secrets/pull/32)
+
 ## [0.3.3] - 2020-01-09
 - Fixed bug where plugin couldn't handle reading secrets from multiple configs.
   [#31](https://github.com/amperity/gocd-vault-secrets/pull/31)
@@ -35,7 +39,9 @@ log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 - Supports one Auth Method, direct Vault tokens
   [#4](https://github.com/amperity/gocd-vault-secrets/pull/4)
 
-[Unreleased]: https://github.com/amperity/gocd-vault-secrets/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/amperity/gocd-vault-secrets/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/amperity/gocd-vault-secrets/compare/v0.3.3...v0.4.0
+[0.3.3]: https://github.com/amperity/gocd-vault-secrets/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/amperity/gocd-vault-secrets/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/amperity/gocd-vault-secrets/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/amperity/gocd-vault-secrets/compare/v0.2.0...v0.3.0
